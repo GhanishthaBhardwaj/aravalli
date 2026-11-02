@@ -42,6 +42,9 @@ export function validateRisk(v: RiskInput, employees: Employee[], today: string)
   if (hasL !== hasI) {
     if (!hasL) e.likelihood = 'Select likelihood, or clear impact to skip the assessment.';
     else e.impact = 'Select impact, or clear likelihood to skip the assessment.';
+  }  else if (hasL && hasI) {
+    if (!inRange(v.likelihood as number)) e.likelihood = 'Likelihood must be a whole number from 1 to 5.';
+    if (!inRange(v.impact as number)) e.impact = 'Impact must be a whole number from 1 to 5.';
   }
   return e;
 }
