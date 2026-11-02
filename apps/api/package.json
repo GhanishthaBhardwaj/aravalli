@@ -1,0 +1,15 @@
+{
+  "name": "@aravalli/api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "API server (filled in during Phase 2). For now it owns the database folder: migrations and SQL scripts.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "seed-sql": "tsx scripts/generate-seed-sql.mjs",
+    "db:migrate": "node scripts/migrate.mjs"
+  },
+  "dependencies": {
+    "@aravalli/shared": "*"
+  }
+}
