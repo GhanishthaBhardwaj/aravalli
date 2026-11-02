@@ -1,0 +1,89 @@
+import { RISK_CATEGORIES, SEVERITIES } from './types';
+import type { Employee } from './types';
+
+export type Errors = Record<string, string | undefined>;
+
+export const DEMO_TODAY = '2026-10-20';
+export const DEMO_NOW = '2026-10-20T17:30';
+
+const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+const isDateTime = (s: string) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && !Number.isNaN(Date.parse(s));
+const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= 5;
+
+export interface RiskInput {
+  title: string;
+  description: string;
+  category: string;
+  department_id: number | null;
+  owner_employee_id: number | null;
+  identified_date: string;
+  likelihood: number | null;
+  impact: number | null;
+  mitigation_notes: string;
+}
+
+export function validateRisk(v: RiskInput, employees: Employee[], today = DEMO_TODAY): Errors {
+  const e: Errors = {};
+  const t = v.title.trim();
+  if (!t) e.title = 'Title is required.';
+  else if (t.length < 5 || t.length > 150) e.title = 'Title must be 5–150 characters.';
+  if (!v.description.trim()) e.description = 'Description is required.';
+  if (!(RISK_CATEGORIES as readonly string[]).includes(v.category)) e.category = 'Choose a category.';
+  if (!v.department_id) e.department_id = 'Choose a department.';
+  if (!v.owner_employee_id) e.owner_employee_id = 'Choose an owner.';
+  else if (v.department_id) {
+    const o = employees.find((x) => x.employee_id === v.owner_employee_id);
+    if (!o || o.department_id !== v.department_id) e.owner_employee_id = 'Owner must belong to the selected department.';
+    else if (!o.is_active) e.owner_employee_id = 'Owner must be an active employee.';
+  }
+  if (!isDate(v.identified_date)) e.identified_date = 'Enter a valid date.';
+  else if (v.identified_date > today) e.identified_date = 'Date cannot be in the future.';
+  const hasL = v.likelihood !== null;
+  const hasI = v.impact !== null;
+  if (hasL !== hasI) {
+    if (!hasL) e.likelihood = 'Select likelihood, or clear impact to skip the assessment.';
+    else e.impact = 'Select impact, or clear likelihood to skip the assessment.';
+  }
+  return e;
+}
+
+export interface AssessmentInput {
+  likelihood: number | null;
+  impact: number | null;
+  assessment_date: string;
+  mitigation_notes: string;
+}
+
+export function validateAssessment(v: AssessmentInput, today = DEMO_TODAY): Errors {
+  const e: Errors = {};
+  if (v.likelihood === null || !inRange(v.likelihood)) e.likelihood = 'Select likelihood (1–5).';
+  if (v.impact === null || !inRange(v.impact)) e.impact = 'Select impact (1–5).';
+  if (!isDate(v.assessment_date)) e.assessment_date = 'Enter a valid date.';
+  else if (v.assessment_date > today) e.assessment_date = 'Date cannot be in the future.';
+  return e;
+}
+
+export interface IncidentInput {
+  title: string;
+  description: string;
+  severity: string;
+  department_id: number | null;
+  occurred_at: string;
+}
+
+export function validateIncident(v: IncidentInput, now = DEMO_NOW): Errors {
+  const e: Errors = {};
+  const t = v.title.trim();
+  if (!t) e.title = 'Title is required.';
+  else if (t.length < 5 || t.length > 150) e.title = 'Title must be 5–150 characters.';
+  if (!v.description.trim()) e.description = 'Description is required.';
+  if (!(SEVERITIES as readonly string[]).includes(v.severity)) e.severity = 'Choose a severity.';
+  if (!v.department_id) e.department_id = 'Choose the affected department.';
+  if (!isDateTime(v.occurred_at)) e.occurred_at = 'Enter a valid date and time.';
+  else if (v.occurred_at > now) e.occurred_at = 'Occurrence time cannot be in the future.';
+  return e;
+}
+
+export function validateNote(text: string, label = 'Note'): string | undefined {
+  return text.trim() ? undefined : `${label} is required.`;
+}
