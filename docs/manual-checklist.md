@@ -1,60 +1,45 @@
-# Manual test checklist
+# Manual test checklist (about 15 minutes)
 
-Run the app with `npm run dev` and open http://localhost:5173. The automated suite already covers these flows; this is for
-you to see them with your own eyes. "Reset sample data" (bottom of the left menu, click twice) returns to the starting point.
+Start everything with `npm run dev`, then open **http://localhost:5173**. The API runs beside it on port 3001; its documentation is at
+http://localhost:3001/api/docs. Data now lives in MySQL, so changes you make stay until you reset the database (`npm run db:reset -- --yes`,
+then `npm run db:migrate` and `npm run db:seed`).
 
-## 1. First look
-- [ ] The Overview opens with a large headline, four figures, a heat map and two charts. No console errors.
-- [ ] The footer says the company is fictional (this is the sample organisation).
-- [ ] Open the menu entries one by one: every screen loads, shows a brief loading state, then its content.
-- [ ] Type a code (`RSK-0002`) and a word (`phishing`) in the top search. Arrow keys and Enter open a result.
-- [ ] Visit `/nope` and `/risks/RSK-9999`: a 404 page with a way back.
+## 1. First look (2 min)
+- [ ] The Overview shows a headline, four figures, a heat map, a list of top risks and two charts. No red errors.
+- [ ] Click through every menu entry: Risk Register, Heat Map, Incident Register, Report Incident, Departments, People, Reports. Each loads real rows.
+- [ ] In the top search type `phishing`, then `INC-00`: results appear; Enter opens one.
+- [ ] Open `/nope` and `/risks/RSK-9999`: a "doesn't exist" page with a way back.
 
-## 2. Colour theme
-- [ ] The theme follows your system (switch your OS between light and dark and watch it follow).
-- [ ] The three-way switch in the top bar (System / Light / Dark) overrides it, and the choice survives a reload.
-- [ ] Both themes: text is readable, risk bands are distinct (light grey, grey, dark, orange), and every band shows its name.
+## 2. Risks (4 min)
+- [ ] **Register risk**: press the button empty and read the errors. Fill it in, choose an owner by typing part of a name, give likelihood 4 and impact 5 (it shows "20 Critical"), save. You land on a new record with a code you did not type.
+- [ ] On that risk, **New assessment** with a different score: the history gets a second row and a chart appears.
+- [ ] **Change status** to Closed: a note is required. After closing, the only way back is Monitoring.
+- [ ] Risk Register: filter by Department and Severity (the address bar changes), sort the Score column, go to page 2, reload (filters stay), search for nonsense (empty state with "Clear filters").
+- [ ] Heat Map: click a cell, see its risks; switch to "As of first assessment" and see them move.
 
-## 3. Risks
-- [ ] **Register a risk**: submit empty and read the errors; choose any person as owner (it does not have to be someone in the risk's department);
-  set likelihood 4 and impact 5 and see "20 Critical"; save and land on `RSK-0041`, status Assessed.
-- [ ] Register another with no score: its status is Identified.
-- [ ] On an Identified risk, open **Change status**: "Assessed" is not offered until it has an assessment.
-- [ ] **Assess a risk twice** (New assessment, two different scores): the history grows, the chart shows the movement, the heat map moves.
-- [ ] Try a future date, and a date before the risk was identified, in the assessment: both are refused with a message.
-- [ ] **Close a risk**: the closure note is required. Afterwards the only option is to reopen it to Monitoring.
-- [ ] **Risk Register**: filter by department/status/severity (the web address changes), sort a column, go to page 2, reload (filters stay),
-  search for nonsense (empty state with "Clear filters").
+## 3. Incidents (4 min)
+- [ ] **Report incident**: a time in the future is refused; a valid one creates an Open incident with a generated code and one timeline entry.
+- [ ] On it: assign someone (type to search), link a risk, then post updates moving it Investigating, Resolved (the note is required), Closed. Try to reopen a Resolved one.
+- [ ] Open an incident that is already Closed: every control is disabled and says "Closed incidents are final".
+- [ ] Incident Register: filter by Severity, Status and Assignee, sort, page.
+- [ ] Reports: all three tabs load; **Export CSV** downloads a file; **Print** opens the print preview with only that report.
 
-## 4. Incidents
-- [ ] **Report an incident** with no assignee and no risk. It starts Open with one timeline entry, "Incident reported". A future time is refused.
-- [ ] Assign it: the timeline gains "Assigned to ...".
-- [ ] Walk it Open → Investigating → Resolved (a resolution note is required) → Closed. Only valid next steps are offered.
-- [ ] Reopen a Resolved incident to Investigating; resolve it again.
-- [ ] Link and unlink a risk (the box searches by code or title). Each writes a timeline entry.
-- [ ] Open a **Closed** incident: the note box, status change, reassign and link buttons are all disabled, with the reason "Closed incidents are final".
-- [ ] **Incident Register**: filter by severity, status and assignee (including Unassigned).
+## 4. Roles (2 min)
+- [ ] "Acting as" in the top bar: choose an **Auditor**. Every button that would change something is disabled, with a reason on hover.
+- [ ] Choose an **Employee**. They can report an incident but cannot register a risk, assign, link or close.
+- [ ] Reload the page: the person you chose is still selected.
+- [ ] Try it for real: as an Auditor, send a write straight to the API with Swagger (`/api/docs`, header `X-Actor-Id` set to an Auditor's id): the server answers 403.
 
-## 5. Roles (use "Acting as" in the top bar)
-- [ ] **Sandeep Joshi (Auditor)**: every action button is disabled; hover or tab to one and read why.
-- [ ] **Pooja Nair (Employee)**: can report an incident, can update only incidents she reported or is assigned to, cannot register or assess risks, cannot assign or close.
-- [ ] **Neha Kapoor (Risk Officer), Rajesh Khanna (Department Head), Arjun Menon (Org Admin)**: all actions available.
-- Note: roles are checked in the browser only. Real enforcement arrives with the backend (Phase 3).
+## 5. Light and dark (1 min)
+- [ ] The three-way switch in the top bar (System / Light / Dark) changes the whole app and survives a reload.
+- [ ] In both: text is readable, and the risk bands (light grey, grey, dark, orange) are told apart by their names, not just colour.
 
-## 6. Reports, heat map, lists
-- [ ] **Reports**: three tabs. On each, Export CSV downloads a file that opens in a spreadsheet; Print shows only that report.
-- [ ] **Heat Map**: click a cell to list its risks; switch to "As of first assessment" and see which risks moved (shown as `16 → 9`).
-- [ ] **Departments** and **People**: the counts are links that open the register already filtered.
+## 6. Phone width (2 min)
+- [ ] Narrow the browser to about 360 pixels wide (or use the device toolbar).
+- [ ] The menu becomes a button; open it, move around, and it closes after you pick a page.
+- [ ] Tables show only their key columns (code, title, score or severity) and do not scroll sideways. Forms are one column.
+- [ ] Nothing is cut off on Overview, a risk record, an incident record and the heat map.
 
-## 7. Small screens (resize the window to 360px wide, or use the browser's device mode)
-- [ ] No sideways scrolling on any screen. Tables keep their key columns on screen and drop the secondary ones (the record page shows everything).
-- [ ] The menu button opens a slide-out menu (it also has the theme switch) and closes after choosing a page.
-- [ ] Dialogs ("New assessment", "Change status") fit the screen.
-
-## 8. Keyboard and motion
-- [ ] Tab through a page: a clear focus ring is always visible. Escape closes dialogs and returns focus to the button you used.
-- [ ] Left/Right arrows move between tabs (Heat Map, Reports).
-- [ ] With "reduce motion" switched on in your OS, the heat map and charts appear without animation.
-
-## 9. Saved data
-- [ ] Make a change, reload: it is still there. Click "Reset sample data" twice: back to the original.
+## If something is wrong
+Note the page address, what you clicked, and what you expected. If the page shows "could not be loaded", check that the terminal running
+`npm run dev` shows both `[api]` and `[web]` lines and no errors.

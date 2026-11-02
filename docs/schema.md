@@ -143,3 +143,14 @@ edited**: a change to the schema is always a new migration. Commands:
 | `npm run db:verify` | Build a throwaway `<DB_NAME>_verify` database and try to break every rule. See `db-verification.md`. |
 
 Connection details come from `.env` (copy `.env.example`); nothing is hardcoded.
+
+## Migration 0007: record-code counters and source columns (Phase 2)
+
+- **`organisation_counter (organisation_id, counter_name, current_value)`**: one row per organisation and kind (`risk`, `incident`). The API
+  allocates the next code with a single locking `UPDATE ... SET current_value = LAST_INSERT_ID(current_value + 1)` inside the creating
+  transaction, so concurrent creations take turns and codes are consecutive per organisation. The column is not called `last_value`
+  because that is a reserved word in MySQL 8 (it is a window function); this was found by running the migration. See `docs/api.md`.
+- **`incident.source_system`, `incident.source_id`**: both NULL for incidents created in the product, both set for records imported from a
+  public dataset, so any imported incident can be traced to its original record. `UNIQUE (organisation_id, source_system, source_id)`
+  makes a repeated import recognise what it has already loaded (several NULLs are allowed in a unique key, so only imported rows are
+  constrained), and a CHECK keeps the two columns either both present or both absent.
