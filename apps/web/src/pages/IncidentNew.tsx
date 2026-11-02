@@ -38,7 +38,7 @@ export function IncidentNew() {
 
   return (
     <Page title="Report incident" description="Describe what happened. You can assign it and link a risk now or later.">
-      {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-accent pl-4 text-[15px]">{p.reason}</p>}
+      {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-fg pl-4 text-[15px]">{p.reason}</p>}
       <form onSubmit={submit} noValidate className="max-w-2xl">
         <Section title="Incident details">
           <fieldset disabled={!p.allowed} className="space-y-1">

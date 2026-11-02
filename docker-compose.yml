@@ -1,0 +1,27 @@
+# Optional: MySQL 8 in Docker, for anyone who does not want a local install.
+#   docker compose up -d db        start it (settings come from .env, see .env.example)
+#   npm run db:migrate             create the tables
+#   npm run db:seed                load the sample organisation
+# Point DB_HOST at 127.0.0.1 and keep DB_USER / DB_PASSWORD / DB_NAME the same as in .env.
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${DB_NAME:-aravalli_dev}
+      MYSQL_USER: ${DB_USER:?Set DB_USER in .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    ports:
+      - '${DB_PORT:-3306}:3306'
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_0900_ai_ci']
+    volumes:
+      - aravalli-db:/var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -p"$$MYSQL_ROOT_PASSWORD" --silent']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  aravalli-db:

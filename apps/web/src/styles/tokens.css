@@ -93,7 +93,7 @@
   a { color: inherit; }
   :focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
   button { font: inherit; color: inherit; }
-  ::selection { background: var(--accent); color: var(--accent-fg); }
+  ::selection { background: var(--fg); color: var(--bg); }
 }
 
 @layer components {
@@ -128,7 +128,7 @@
   .control:hover { border-color: var(--subtle); }
   .control:focus { border-color: var(--fg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg) 14%, transparent); outline: none; }
   textarea.control { height: auto; padding: 10px 12px; }
-  .control[aria-invalid='true'] { border-color: var(--fg); box-shadow: inset 3px 0 0 var(--accent); }
+  .control[aria-invalid='true'] { border-color: var(--fg); box-shadow: inset 3px 0 0 var(--fg); }
   .control:disabled { background: var(--surface-2); color: var(--subtle); cursor: not-allowed; }
   select.control { appearance: none; padding-right: 36px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2371717a'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");

@@ -3,11 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "API server (filled in during Phase 2). For now it owns the database folder: migrations and SQL scripts.",
+  "description": "API server (filled in during Phase 2). For now it owns the database: migrations, the migration runner, the sample seed and the verification script.",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "seed-sql": "tsx scripts/generate-seed-sql.mjs",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node src/db/migrate.mjs up",
+    "db:status": "node src/db/migrate.mjs status",
+    "db:seed": "node src/db/migrate.mjs seed",
+    "db:reset": "node src/db/migrate.mjs reset",
+    "db:verify": "tsx src/db/verify.mjs"
   },
   "dependencies": {
     "@aravalli/shared": "*"

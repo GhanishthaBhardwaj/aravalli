@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -15,6 +18,10 @@
     "lint": "eslint apps packages --max-warnings 0",
     "e2e": "npm run e2e -w @aravalli/web",
     "db:migrate": "npm run db:migrate -w @aravalli/api",
+    "db:status": "npm run db:status -w @aravalli/api",
+    "db:seed": "npm run db:seed -w @aravalli/api",
+    "db:reset": "npm run db:reset -w @aravalli/api",
+    "db:verify": "npm run db:verify -w @aravalli/api",
     "db:seed-sql": "npm run seed-sql -w @aravalli/api"
   },
   "devDependencies": {
