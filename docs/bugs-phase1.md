@@ -23,6 +23,9 @@ Each entry says how it was found, what was wrong, and what was done. Every fix h
 | 15 | Screenshots | A zero count on Departments was a link to an empty list. | Zero is plain text. |
 | 16 | Screenshots at 360px | The three-level breadcrumb was cut to "Incide... > Incident Regi...". | A phone shows the last two levels. |
 | 17 | Test review | A test that checks both database views expose `organisation_id` only passed by accident (its pattern ran into text in a trigger that was later deleted). | The pattern is now exact. |
+| 18 | **Real MySQL** | `incident.status` and the two status columns of `incident_update` were `VARCHAR(12)`, but `Investigating` has 13 characters. MySQL refused to load any incident in that status ("Data too long"), so the schema could never have held real data. Text-only tests could not see this. | Widened to 16. A new test checks that every allowed value fits its column, for every enum, and that record codes have room to grow past 9,999. |
+| 19 | **Real MySQL (Windows)** | The migration runner read back `schema_migrations` with a stray carriage return (`mysql.exe` ends lines with \r\n), so every applied migration looked "edited after it was applied" and the runner stopped. | Rows are parsed with either line ending. Tested. |
+| 20 | Verification run | Two mistakes in the verification script itself: a "bad severity" value that was rejected for being too long rather than by the CHECK being tested, and a positive check that added a risk before the row-count checks ran. | Test value fits the column; the check runs last. |
 
 ## Known and not fixed
 

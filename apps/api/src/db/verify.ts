@@ -1,6 +1,6 @@
 // Proves the schema on a real MySQL server.
 //   npm run db:verify                       prints the results
-//   npm run db:verify -- --report docs/db-verification.md   also saves them as a report
+//   npm run db:verify -w @aravalli/api -- --report <absolute path>   also saves them as a report (add --keep to keep the throwaway database)
 // Expected values are derived from the shared sample dataset, so they cannot drift from the seed.
 //
 // It builds a throwaway database called <DB_NAME>_verify (dropped and recreated each run), applies every
@@ -114,7 +114,7 @@ add('Constraints: rejected', 'impact of 0', `INSERT INTO risk_assessment (organi
 add('Constraints: rejected', 'writing risk_score directly (it is a generated column)', `INSERT INTO risk_assessment (organisation_id, risk_id, assessed_by, assessment_date, likelihood, impact, risk_score)
   VALUES (${ORG2}, ${risk(ORG2, 'RSK-0001')}, ${emp(ORG2, 'EMP-1001')}, '2026-02-11', 3, 3, 25);`, reject(/ERROR 3105/s));
 add('Constraints: rejected', 'incident severity that is not in the list', `INSERT INTO incident (organisation_id, incident_code, title, description, severity, department_id, reported_by, occurred_at, reported_at)
-  VALUES (${ORG2}, 'INC-0002', 'Bad severity', 'Severity invalid.', 'Catastrophic', ${dept(ORG2, 'FIN')}, ${emp(ORG2, 'EMP-1001')}, '2026-02-01 09:00:00', '2026-02-01 10:00:00');`, reject(/ERROR 3819.*ck_incident_severity/s));
+  VALUES (${ORG2}, 'INC-0002', 'Bad severity', 'Severity invalid.', 'Extreme', ${dept(ORG2, 'FIN')}, ${emp(ORG2, 'EMP-1001')}, '2026-02-01 09:00:00', '2026-02-01 10:00:00');`, reject(/ERROR 3819.*ck_incident_severity/s));
 add('Constraints: rejected', 'incident reported before it occurred', `INSERT INTO incident (organisation_id, incident_code, title, description, severity, department_id, reported_by, occurred_at, reported_at)
   VALUES (${ORG2}, 'INC-0003', 'Time travel', 'Reported before it happened.', 'Low', ${dept(ORG2, 'FIN')}, ${emp(ORG2, 'EMP-1001')}, '2026-02-01 09:00:00', '2026-02-01 08:00:00');`, reject(/ERROR 3819.*ck_incident_reported_after_occurred/s));
 add('Constraints: rejected', 'incident resolved before it occurred', `INSERT INTO incident (organisation_id, incident_code, title, description, severity, status, department_id, reported_by, occurred_at, reported_at, resolved_at)
@@ -132,8 +132,6 @@ add('Triggers: rejected', 'updating a risk assessment (history is append-only)',
 add('Triggers: rejected', 'deleting a risk assessment', `DELETE FROM risk_assessment WHERE organisation_id = ${ORG1} LIMIT 1;`, reject(/ERROR 1644.*risk_assessment history is append-only/s));
 add('Triggers: rejected', 'updating an incident update', `UPDATE incident_update SET update_text = 'Edited' WHERE organisation_id = ${ORG1} LIMIT 1;`, reject(/ERROR 1644.*incident_update is append-only/s));
 add('Triggers: rejected', 'deleting an incident update', `DELETE FROM incident_update WHERE organisation_id = ${ORG1} LIMIT 1;`, reject(/ERROR 1644.*incident_update is append-only/s));
-add('Constraints: allowed', 'a risk can be owned by someone from another department (a Risk Officer can own risks across departments)', `INSERT INTO risk (organisation_id, risk_code, title, description, category, department_id, owner_employee_id, identified_date)
-  VALUES (${ORG1}, 'RSK-9002', 'Cross department owner', 'Owner is in Finance, risk is in IT.', 'Technology', ${dept(ORG1, 'IT')}, ${emp(ORG1, 'EMP-1001')}, '2026-01-12');`, OK);
 
 add('Delete protection: rejected', 'deleting an employee who owns risks', `DELETE FROM employee WHERE organisation_id = ${ORG1} AND employee_code = 'EMP-1014';`, reject(/ERROR 1451/s));
 add('Delete protection: rejected', 'deleting a department that has employees', `DELETE FROM department WHERE organisation_id = ${ORG1} AND code = 'FIN';`, reject(/ERROR 1451/s));
@@ -166,6 +164,10 @@ add('Views and values', 'views are tenant-scoped: organisation 2 sees only its o
 add('Views and values', 'views are tenant-scoped: organisation 2 sees only its own 1 incident', 'SELECT 1;', VALUE(`SELECT COUNT(*) FROM v_incident_summary WHERE organisation_id = ${ORG2};`, '1'));
 add('Views and values', 'seed has the expected rows (risks, assessments, incidents, updates)', 'SELECT 1;',
   VALUE(`SELECT CONCAT((SELECT COUNT(*) FROM risk WHERE organisation_id = ${ORG1}), '/', (SELECT COUNT(*) FROM risk_assessment WHERE organisation_id = ${ORG1}), '/', (SELECT COUNT(*) FROM incident WHERE organisation_id = ${ORG1}), '/', (SELECT COUNT(*) FROM incident_update WHERE organisation_id = ${ORG1}));`, `${seed.risks.length}/${seed.risk_assessments.length}/${seed.incidents.length}/${seed.incident_updates.length}`));
+
+// This one adds a row to the sample organisation, so it runs after every count above.
+add('Constraints: allowed', 'a risk can be owned by someone from another department (a Risk Officer can own risks across departments)', `INSERT INTO risk (organisation_id, risk_code, title, description, category, department_id, owner_employee_id, identified_date)
+  VALUES (${ORG1}, 'RSK-9002', 'Cross department owner', 'Owner is in Finance, risk is in IT.', 'Technology', ${dept(ORG1, 'IT')}, ${emp(ORG1, 'EMP-1001')}, '2026-01-12');`, OK);
 
 // The reporting queries must all run.
 const queriesFile = readFileSync(join(apiRoot, 'database', 'queries.sql'), 'utf8');
@@ -215,12 +217,16 @@ if (reportPath) {
       group = r.group;
       lines.push(`## ${group}`, '', '| Result | Check | What MySQL said |', '| --- | --- | --- |');
     }
-    lines.push(`| ${r.pass ? 'PASS' : '**FAIL**'} | ${r.name} | ${r.detail.replace(/\|/g, '\\|').slice(0, 300)} |`);
+    lines.push(`| ${r.pass ? 'PASS' : '**FAIL**'} | ${r.name} | ${r.detail.replace(/\|/g, '\\|').slice(0, 500)} |`);
     const next = results[results.indexOf(r) + 1];
     if (!next || next.group !== group) lines.push('');
   }
   mkdirSync(dirname(reportPath), { recursive: true });
   writeFileSync(reportPath, lines.join('\n'));
   console.log(`Report written to ${reportPath}`);
+}
+// A clean run leaves nothing behind. After a failure the database is kept so it can be inspected; --keep forces that.
+if (!failed.length && !process.argv.includes('--keep')) {
+  runMysql(config, `DROP DATABASE IF EXISTS \`${verifyDb}\`;`, { database: false });
 }
 process.exit(failed.length ? 1 : 0);

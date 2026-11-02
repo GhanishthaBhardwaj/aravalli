@@ -8,7 +8,7 @@ Aravalli is being built as a **multi-tenant SaaS product**: any company will be 
 own risks and incidents, completely separate from every other company. The plan is in [`PLAN.md`](PLAN.md).
 
 **Where it stands (end of Phase 1):** a polished web app running on sample data in the browser, a tenant-aware MySQL schema with
-migrations, and a test suite. There is no backend and no login yet. The sample organisation, *Aravalli Industries Ltd.*, is
+migrations that has been run and verified on MySQL 8, and a test suite. There is no backend and no login yet. The sample organisation, *Aravalli Industries Ltd.*, is
 **fictional**, and its data lives in your browser (the app labels it as demo data).
 
 ## Quick start

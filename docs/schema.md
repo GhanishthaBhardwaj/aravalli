@@ -3,8 +3,8 @@
 MySQL 8.0.16 or newer (CHECK constraints are only enforced from that version; window functions and generated columns are used).
 The schema lives in ordered migration files in [`apps/api/database/migrations`](../apps/api/database/migrations); this page explains it.
 
-Status: written and checked as text by automated tests. The proof run on a real MySQL server is recorded in
-[`db-verification.md`](db-verification.md) once it has been done (see that file for its current state).
+Status: applied and verified on MySQL 8.0.46. All six migrations apply cleanly, the sample organisation loads, and 52 checks (every constraint,
+view, trigger and tenant rule) pass; the real server output is in [`db-verification.md`](db-verification.md). Automated tests also check the SQL as text.
 
 ## How tenancy works
 

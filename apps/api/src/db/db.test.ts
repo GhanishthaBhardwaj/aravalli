@@ -7,7 +7,7 @@ import {
   bandFor, INCIDENT_STATUSES, RISK_CATEGORIES, RISK_STATUSES, ROLES, seed, SEVERITIES,
 } from '@aravalli/shared';
 import { defaultsFileText, isDisposableDatabase, readDbConfig } from './config';
-import { listMigrations, planMigrations } from './migrations';
+import { listMigrations, parseAppliedRows, planMigrations } from './migrations';
 
 const dbDir = fileURLToPath(new URL('../../database/', import.meta.url));
 const migrations = listMigrations(join(dbDir, 'migrations'));
@@ -101,6 +101,18 @@ describe('migration planner', () => {
   });
 });
 
+describe('reading the applied-migrations table', () => {
+  it('parses rows with Unix or Windows line endings (mysql.exe ends lines with \\r\\n)', () => {
+    const row = '1\torganisation\tabc123';
+    expect(parseAppliedRows(`${row}\n2\tx\tdef456\n`)).toEqual([
+      { version: 1, name: 'organisation', checksum: 'abc123' },
+      { version: 2, name: 'x', checksum: 'def456' },
+    ]);
+    expect(parseAppliedRows(`${row}\r\n2\tx\tdef456\r\n`)[0].checksum).toBe('abc123');
+    expect(parseAppliedRows('')).toEqual([]);
+  });
+});
+
 describe('the schema, read as text (guarantees that hold before any server is involved)', () => {
   const tenantTables = ['department', 'employee', 'risk', 'risk_assessment', 'incident', 'incident_update'];
 
@@ -163,6 +175,31 @@ describe('the schema, read as text (guarantees that hold before any server is in
     expect(sql).toMatch(/risk_score >= 10\s+THEN 'High'/);
     expect(sql).toMatch(/risk_score >= 5\s+THEN 'Medium'/);
     expect([bandFor(20), bandFor(19), bandFor(10), bandFor(9), bandFor(5), bandFor(4)]).toEqual(['Critical', 'High', 'High', 'Medium', 'Medium', 'Low']);
+  });
+});
+
+describe('every allowed value fits its column (found on a real server: "Investigating" did not fit VARCHAR(12))', () => {
+  const widthOf = (table: string, column: string) => {
+    const body = new RegExp(`CREATE TABLE ${table} \\(([\\s\\S]*?)\\) ENGINE`).exec(sql)?.[1] ?? '';
+    const m = new RegExp(`\\b${column}\\s+VARCHAR\\((\\d+)\\)`).exec(body);
+    expect(m, `${table}.${column}`).not.toBeNull();
+    return Number((m as RegExpExecArray)[1]);
+  };
+  it.each([
+    ['employee', 'role', ROLES],
+    ['risk', 'category', RISK_CATEGORIES],
+    ['risk', 'status', RISK_STATUSES],
+    ['incident', 'severity', SEVERITIES],
+    ['incident', 'status', INCIDENT_STATUSES],
+    ['incident_update', 'status_from', INCIDENT_STATUSES],
+    ['incident_update', 'status_to', INCIDENT_STATUSES],
+  ] as [string, string, readonly string[]][])('%s.%s', (table, column, values) => {
+    const width = widthOf(table, column);
+    for (const v of values) expect(v.length, `"${v}" in ${table}.${column}(${width})`).toBeLessThanOrEqual(width);
+  });
+  it('record codes have room to grow (RSK-10000 and INC-10000)', () => {
+    expect(widthOf('risk', 'risk_code')).toBeGreaterThanOrEqual('RSK-10000'.length);
+    expect(widthOf('incident', 'incident_code')).toBeGreaterThanOrEqual('INC-10000'.length);
   });
 });
 

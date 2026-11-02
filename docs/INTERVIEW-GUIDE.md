@@ -21,8 +21,8 @@ pure, tested functions, and I am turning it into a multi-tenant SaaS where every
 | --- | --- |
 | Web app: 12 screens, light and dark themes, works down to 360px | Backend / API (Phase 2) |
 | All business rules, in a shared package, with tests | Real login with email and password (Phase 3) |
-| Tenant-aware MySQL schema as ordered migrations, a migration runner, a verification script | The schema has **not been run on MySQL yet**; the proof run is pending |
-| 140 unit tests and 70 browser tests | Server-side role enforcement (Phase 3) |
+| Tenant-aware MySQL schema as ordered migrations, a migration runner, a verification script | |
+| 149 unit tests, 70 browser tests, and 52 checks run against a real MySQL 8 server | Server-side role enforcement (Phase 3) |
 | Sample organisation (fictional) with realistic data | Organisation sign-up, invitations (Phase 3) |
 
 Roles (`Org Admin`, `Risk Officer`, `Department Head`, `Auditor`, `Employee`) are checked **in the browser only** today. That is a
@@ -101,14 +101,15 @@ what login and server-side checks (Phase 3) are for. Data-level isolation is the
 - Motion is subtle and is switched off when the user's system asks for reduced motion.
 - Charts are Recharts, restyled to the same tones, and each has a hidden data table for screen readers.
 
-## 9. How it is tested (140 unit tests, 70 browser tests)
+## 9. How it is tested (149 unit tests, 70 browser tests, 52 database checks)
 
 | Layer | What it catches | Examples |
 | --- | --- | --- |
 | Shared unit tests (77) | The rules | band boundaries 4/5, 9/10, 16/20; every allowed and refused transition; validators; the clock; sample-data integrity |
 | Web unit tests (29) | The write layer and derived figures | register, assess, report, walk an incident to Closed, closed is final, KPIs |
-| Database tooling (34) | The SQL and runner, without a server | composite foreign keys, append-only triggers present, enum lists match TypeScript, migration planning |
-| Browser tests (70) | The real thing, clicked | forms, dialogs, tabs, filters in the URL, CSV export, print, roles, light/dark, 360px, error state |
+| Database tooling (43) | The SQL and runner, without a server | composite foreign keys, append-only triggers present, enum lists match TypeScript, migration planning |
+| Browser tests (70) | The real thing, clicked |
+| Real MySQL (52 checks, `npm run db:verify`) | The database itself | every constraint rejects what it should, history cannot be edited, another organisation's rows cannot be referenced, views return the right numbers. Real error messages are in `docs/db-verification.md` | forms, dialogs, tabs, filters in the URL, CSV export, print, roles, light/dark, 360px, error state |
 
 A good story: writing the browser tests *before* fixing anything found real bugs (see below), which unit tests had not.
 
@@ -119,12 +120,12 @@ A good story: writing the browser tests *before* fixing anything found real bugs
 3. **Stale saved data** was never invalidated when the sample data changed.
 4. **The clock and the sample company were hardcoded** across components, which would block any real organisation.
 5. **On a phone, tables showed the wrong columns** and record codes wrapped. Found by screenshotting every screen at 360px, not by any automated check.
+6. **A real database found what text-only tests could not:** the status column was one character too short for the word "Investigating", so MySQL would have rejected real incidents; and the migration runner misread its own checksums on Windows because of line endings. The lesson worth telling: tests that read SQL as text are useful but are not a substitute for running it.
 
 ## 11. Trade-offs and honest limitations
 
 - Roles are enforced in the browser only. Fine for a demo, not for production. Phase 3 moves it to the server.
 - Data is in browser storage. Phase 2 replaces it with the API and MySQL.
-- The schema is verified as text and by tests, **but not yet on a running MySQL server**. The verification script is ready; the run was blocked because the connection settings file (`.env`) did not exist yet.
 - One large JavaScript bundle (about 840 kB). Easy to split by route; not done.
 - The database scripts are TypeScript, run with `tsx`, and use the `mysql` command-line client instead of a database driver, so they add no runtime dependency.
 
@@ -168,4 +169,4 @@ without it. I also test the rules at their edges (the 4/5, 9/10, 16/20 band boun
 - New design system and every screen redone; light and dark themes; checked at desktop, dark and 360px (screenshots of every screen).
 - Database as ordered migrations with a runner and a verification script, now in TypeScript.
 - Owner-in-department rule removed (form, validation, database); empty states for Departments and People.
-- **Pending:** running the migrations and the verification on a real MySQL server, and recording the result in `docs/db-verification.md`. Blocked only by the missing `.env`; everything else needed is in place.
+- Ran the migrations, the sample seed and the 52-check verification on MySQL 8.0.46. That found two real bugs (above), now fixed and covered by tests. Output saved in `docs/db-verification.md`.

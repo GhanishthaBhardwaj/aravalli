@@ -40,6 +40,17 @@ export function listMigrations(dir: string): Migration[] {
   });
 }
 
+/** Parses the tab-separated output of: SELECT version, name, checksum FROM schema_migrations. Accepts \n and \r\n line ends. */
+export function parseAppliedRows(stdout: string): AppliedMigration[] {
+  return stdout
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== '')
+    .map((line) => {
+      const [version, name, checksum] = line.split('\t');
+      return { version: Number(version), name, checksum: checksum.trim() };
+    });
+}
+
 export function planMigrations(all: Migration[], applied: AppliedMigration[]): { pending: Migration[]; problems: string[] } {
   const byVersion = new Map(all.map((m) => [m.version, m]));
   const problems: string[] = [];

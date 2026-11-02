@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDisposableDatabase, readDbConfig, type DbConfig } from './config';
-import { listMigrations, planMigrations, type AppliedMigration } from './migrations';
+import { listMigrations, parseAppliedRows, planMigrations, type AppliedMigration } from './migrations';
 import { runMysql, type MysqlResult } from './mysql';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -52,10 +52,7 @@ function ensureDatabase() {
 
 function appliedRows(): AppliedMigration[] {
   const r = must(q('SELECT version, name, checksum FROM schema_migrations ORDER BY version;', { query: true }), 'Reading schema_migrations');
-  return r.stdout.split('\n').filter(Boolean).map((line) => {
-    const [version, name, checksum] = line.split('\t');
-    return { version: Number(version), name, checksum };
-  });
+  return parseAppliedRows(r.stdout);
 }
 
 if (command === 'up') {
