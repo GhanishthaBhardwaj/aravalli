@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "id": "uci-incident-log",
+      "title": "Incident management process enriched event log (ServiceNow)",
+      "url": "https://archive.ics.uci.edu/static/public/498/incident+management+process+enriched+event+log.zip",
+      "landingPage": "https://archive.ics.uci.edu/dataset/498/incident+management+process+enriched+event+log",
+      "licence": "CC BY 4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "file": "uci-incident-log.zip",
+      "downloadedOn": "2026-11-02",
+      "bytes": 2400214,
+      "sha256": "6294e29a311647306bfdfc85783f7df66517c197b9cd49aa5ee36ba9c525d1d6",
+      "extractedFiles": [
+        "incident_event_log.csv"
+      ]
+    }
+  ]
+}

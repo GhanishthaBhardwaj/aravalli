@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed-sql": "tsx scripts/generate-seed-sql.ts",
+    "data:download": "tsx scripts/download-data.ts",
     "db:migrate": "tsx src/db/migrate.ts up",
     "db:status": "tsx src/db/migrate.ts status",
     "db:seed": "tsx src/db/migrate.ts seed",
