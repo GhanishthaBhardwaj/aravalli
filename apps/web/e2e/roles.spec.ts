@@ -59,7 +59,7 @@ test('Risk Officer, Department Head and Org Admin have full actions', async ({ p
     await open(page, '/risks');
     await actAs(page, who);
     await ready(page);
-    await expect(page.getByRole('button', { name: 'Register risk' })).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('link', { name: 'Register risk' })).toBeVisible();
   }
 });
 

@@ -23,9 +23,12 @@ async function captureCsv(page: Page) {
   });
 }
 
+const TABS = ['Risk profile', 'Resolution performance', 'Exceptions'];
+
 async function exportCsv(page: Page, index: number): Promise<Captured> {
+  await page.getByRole('tab', { name: new RegExp(`^${TABS[index]}`) }).click();
   const before = await page.evaluate(() => (window as unknown as W).__csv.length);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export CSV' }).nth(index).click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export CSV' }).click()]);
   await expect.poll(() => page.evaluate(() => (window as unknown as W).__csv.length)).toBe(before + 1);
   const csv = (await page.evaluate(() => (window as unknown as W).__csv)).at(-1)!;
   expect(download.suggestedFilename()).toBe(csv.name);
@@ -35,7 +38,8 @@ async function exportCsv(page: Page, index: number): Promise<Captured> {
 test('each report exports a CSV with the right header and rows', async ({ page }) => {
   await captureCsv(page);
   await open(page, '/reports');
-  await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(3);
+  await expect(page.getByRole('tab')).toHaveCount(3);
+  await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(1);
 
   const profile = await exportCsv(page, 0);
   expect(profile.name).toBe('risk-profile-by-department.csv');
@@ -69,7 +73,8 @@ test('Print isolates one report, then restores the page', async ({ page }) => {
     };
   });
   await open(page, '/reports');
-  await page.getByRole('button', { name: 'Print' }).nth(1).click();
+  await page.getByRole('tab', { name: /^Resolution performance/ }).click();
+  await page.getByRole('button', { name: 'Print' }).click();
   expect(await page.evaluate(() => (window as unknown as W).__print)).toEqual({ single: true, active: ['resolution'] });
   expect(await page.evaluate(() => document.body.classList.contains('print-single'))).toBe(false);
 });
@@ -105,8 +110,8 @@ test('changes survive a reload, and Reset restores the sample data', async ({ pa
 
 test('saved data from an older version of the sample dataset is discarded, not shown', async ({ page }) => {
   await open(page, '/risks'); // first visit writes the current saved state
-  const key = await page.evaluate(() => Object.keys(localStorage).find((k) => k.startsWith('aravalli')) ?? '');
-  expect(key).not.toBe('');
+  const key = 'aravalli:state';
+  expect(await page.evaluate((k) => localStorage.getItem(k) !== null, key)).toBe(true);
   // pretend an earlier release saved a tiny dataset under the same key
   await page.evaluate((k) => {
     const saved = JSON.parse(localStorage.getItem(k) ?? '{}');
@@ -119,8 +124,7 @@ test('saved data from an older version of the sample dataset is discarded, not s
 
 test('corrupt saved data does not break the app', async ({ page }) => {
   await open(page, '/risks');
-  const key = await page.evaluate(() => Object.keys(localStorage).find((k) => k.startsWith('aravalli')) ?? '');
-  await page.evaluate((k) => localStorage.setItem(k, '{not json'), key);
+  await page.evaluate(() => localStorage.setItem('aravalli:state', '{not json'));
   await page.reload();
   await ready(page);
   await expect(page.getByText(/of 40 risks/)).toBeVisible();

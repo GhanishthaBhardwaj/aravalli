@@ -23,7 +23,8 @@ export async function open(page: Page, path: string) {
 
 /** Pick a 1–5 score on a labelled segmented control. */
 export async function pick(page: Page, group: 'Likelihood' | 'Impact', value: number) {
-  await page.getByRole('group', { name: group }).getByRole('radio').nth(value - 1).check({ force: true });
+  // click the visible label; the radio input itself is visually hidden
+  await page.getByRole('group', { name: group }).locator('label').nth(value - 1).click();
 }
 
 export const rowCount = (page: Page) => page.locator('tbody tr.row-link').count();

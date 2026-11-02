@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { ReactNode, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 interface FieldProps {
   label: string;
@@ -10,38 +10,36 @@ interface FieldProps {
   children: (p: { id: string; 'aria-invalid': boolean; 'aria-describedby'?: string }) => ReactNode;
 }
 
-/** Label + control + inline error. Errors sit in an aria-live region so they are announced. */
+/** Label + control + inline message. The message sits in an aria-live region, so errors are announced. */
 export function Field({ label, error, hint, required, className = '', children }: FieldProps) {
   const id = useId();
   const msgId = `${id}-msg`;
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-[14px] font-medium text-[#344054]">
+      <label htmlFor={id} className="mb-1.5 block text-[14px] font-medium">
         {label}
-        {required && <span className="text-muted"> (required)</span>}
+        {required && <span className="font-normal text-subtle"> (required)</span>}
       </label>
       {children({ id, 'aria-invalid': Boolean(error), 'aria-describedby': error || hint ? msgId : undefined })}
-      <div id={msgId} aria-live="polite" className="min-h-[18px] pt-1 text-xs">
-        {error ? <span className="text-[var(--sev-critical)]">{error}</span> : hint ? <span className="text-muted">{hint}</span> : null}
+      <div id={msgId} aria-live="polite" className="min-h-[22px] pt-1 text-[13px]">
+        {error ? <span className="font-medium text-fg">{error}</span> : hint ? <span className="text-muted">{hint}</span> : null}
       </div>
     </div>
   );
 }
 
-export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={`field-input ${p.className ?? ''}`} />;
-export const Textarea = (p: TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-  <textarea rows={4} {...p} className={`field-input ${p.className ?? ''}`} />
+export const Input = ({ className = '', ...p }: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={`control ${className}`} />;
+export const Textarea = ({ className = '', ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+  <textarea rows={4} {...p} className={`control ${className}`} />
 );
 
 interface Opt { value: string; label: string }
-export function Select({ options, placeholder, ...p }: SelectHTMLAttributes<HTMLSelectElement> & { options: Opt[]; placeholder?: string }) {
+export function Select({ options, placeholder, className = '', ...p }: SelectHTMLAttributes<HTMLSelectElement> & { options: Opt[]; placeholder?: string }) {
   return (
-    <select {...p} className={`field-input ${p.className ?? ''}`}>
+    <select {...p} className={`control ${className}`}>
       {placeholder !== undefined && <option value="">{placeholder}</option>}
       {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
+        <option key={o.value} value={o.value}>{o.label}</option>
       ))}
     </select>
   );

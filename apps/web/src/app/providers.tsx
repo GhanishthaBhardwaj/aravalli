@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { DEMO_CLOCK, systemClock } from '@aravalli/shared';
 import type { Clock, Dataset, Employee, Organisation } from '@aravalli/shared';
 import { initialData } from '../data/store';
@@ -144,12 +145,23 @@ export function Providers({ children }: { children: ReactNode }) {
       <ToastContext.Provider value={toast}>
         <MetaContext.Provider value={metaCtx}>
           {children}
-          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 no-print" role="status" aria-live="polite">
-            {toasts.map((t) => (
-              <div key={t.id} data-testid="toast" className="panel toast-in px-4 py-2.5 text-sm font-medium" style={{ boxShadow: 'var(--popover-shadow)', borderLeft: '4px solid #2e9e5b' }}>
-                {t.message}
-              </div>
-            ))}
+          <div className="no-print fixed bottom-4 right-4 z-[60] flex w-[min(92vw,380px)] flex-col gap-2" role="status" aria-live="polite">
+            <AnimatePresence initial={false}>
+              {toasts.map((t) => (
+                <motion.div
+                  key={t.id}
+                  layout
+                  data-testid="toast"
+                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 24 }}
+                  transition={{ duration: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
+                  className="rounded-xl border border-line-strong bg-fg px-4 py-3 text-[14px] font-medium text-bg shadow-pop"
+                >
+                  {t.message}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </MetaContext.Provider>
       </ToastContext.Provider>

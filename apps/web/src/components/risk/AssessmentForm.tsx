@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import { bandFor, computeScore, type Errors, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { Field, Input, Textarea } from '../ui/fields';
 import { Button } from '../ui/Button';
-import { SeverityChip } from '../ui/Chip';
-import { bandFor, computeScore, type Errors, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
+import { ScoreBadge } from './ScoreBadge';
 import { addAssessment } from '../../data/store';
 import { useData, useToast } from '../../app/providers';
 
@@ -16,23 +16,16 @@ interface PickerProps {
   clearable?: boolean;
 }
 
-/** Likelihood + impact segmented controls with a live score preview. */
+/** Likelihood and impact controls with a live score preview. */
 export function ScorePicker({ likelihood, impact, onL, onI, errors = {}, clearable }: PickerProps) {
   const score = likelihood && impact ? computeScore(likelihood, impact) : null;
   return (
     <div className="space-y-3">
       <SegmentedControl legend="Likelihood" labels={LIKELIHOOD_LABELS} value={likelihood} onChange={onL} error={errors.likelihood} clearable={clearable} />
       <SegmentedControl legend="Impact" labels={IMPACT_LABELS} value={impact} onChange={onI} error={errors.impact} clearable={clearable} />
-      <div className="flex items-center gap-2 rounded-md border border-line bg-page px-3 py-2" aria-live="polite">
-        <span className="section-title">Score</span>
-        {score ? (
-          <>
-            <span className="mono text-base font-semibold">{score}</span>
-            <SeverityChip severity={bandFor(score)} />
-          </>
-        ) : (
-          <span className="text-muted">Select likelihood and impact</span>
-        )}
+      <div className="flex min-h-[48px] items-center gap-3 rounded-lg border border-line bg-surface-2 px-4 py-2" aria-live="polite">
+        <span className="text-[14px] text-muted">Score</span>
+        {score ? <ScoreBadge score={score} band={bandFor(score)} /> : <span className="text-[14px] text-subtle">Choose likelihood and impact</span>}
       </div>
     </div>
   );
@@ -56,17 +49,17 @@ export function AssessmentForm({ riskId, onDone }: { riskId: number; onDone: () 
   };
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-3">
-      {errors._form && <p role="alert" className="text-[var(--sev-critical)]">{errors._form}</p>}
+    <form onSubmit={submit} noValidate className="space-y-2">
+      {errors._form && <p role="alert" className="text-[14px] font-medium">{errors._form}</p>}
       <ScorePicker likelihood={l} impact={i} onL={setL} onI={setI} errors={errors} />
       <Field label="Assessment date" required error={errors.assessment_date}>
         {(p) => <Input {...p} type="date" max={clock.today()} value={date} onChange={(e) => setDate(e.target.value)} />}
       </Field>
       <Field label="Mitigation notes">
-        {(p) => <Textarea {...p} value={notes} onChange={(e) => setNotes(e.target.value)} />}
+        {(p) => <Textarea {...p} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />}
       </Field>
-      <div className="flex justify-end gap-2">
-        <Button onClick={onDone}>Cancel</Button>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="ghost" onClick={onDone}>Cancel</Button>
         <Button type="submit" variant="primary">Save assessment</Button>
       </div>
     </form>

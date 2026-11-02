@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { type Errors, permit, RISK_CATEGORIES } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useData, useToast } from '../app/providers';
 import { registerRisk } from '../data/store';
-import { type Errors, permit, RISK_CATEGORIES } from '@aravalli/shared';
+import { ScorePicker } from '../components/risk/AssessmentForm';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select, Textarea } from '../components/ui/fields';
-import { Panel } from '../components/ui/misc';
-import { ScorePicker } from '../components/risk/AssessmentForm';
+import { Section } from '../components/ui/layout';
 
 export function RiskNew() {
   const { ds, actor, act, clock } = useData();
@@ -39,10 +39,10 @@ export function RiskNew() {
 
   return (
     <Page title="Register risk" description="Add a risk to the register, with an optional first score.">
-      {!p.allowed && <p role="alert" className="panel mb-4 p-3 text-[13px]">{p.reason} Switch the “Acting as” user to register a risk.</p>}
-      <form onSubmit={submit} noValidate className="grid gap-4 lg:grid-cols-[1fr_380px]">
-        <Panel title="Risk details">
-          {errors._form && <p role="alert" className="mb-2 text-[var(--sev-critical)]">{errors._form}</p>}
+      {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-accent pl-4 text-[15px]">{p.reason} Switch the “Acting as” user to register a risk.</p>}
+      <form onSubmit={submit} noValidate className="grid gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <Section title="Details">
+          {errors._form && <p role="alert" className="mb-3 text-[14px] font-medium">{errors._form}</p>}
           <fieldset disabled={!p.allowed} className="space-y-1">
             <Field label="Title" required error={errors.title}>
               {(f) => <Input {...f} value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} />}
@@ -50,7 +50,7 @@ export function RiskNew() {
             <Field label="Description" required error={errors.description}>
               {(f) => <Textarea {...f} value={description} onChange={(e) => setDescription(e.target.value)} />}
             </Field>
-            <div className="grid gap-x-3 sm:grid-cols-2">
+            <div className="grid gap-x-4 sm:grid-cols-2">
               <Field label="Category" required error={errors.category}>
                 {(f) => <Select {...f} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Select…" options={RISK_CATEGORIES.map((c) => ({ value: c, label: c }))} />}
               </Field>
@@ -72,19 +72,20 @@ export function RiskNew() {
               </Field>
             </div>
           </fieldset>
-        </Panel>
-        <Panel title="Initial score (optional)">
-          <fieldset disabled={!p.allowed} className="space-y-3">
+        </Section>
+
+        <Section title="Initial score (optional)">
+          <fieldset disabled={!p.allowed} className="space-y-2">
             <ScorePicker likelihood={l} impact={i} onL={setL} onI={setI} errors={errors} clearable />
             <Field label="Mitigation notes">
               {(f) => <Textarea {...f} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />}
             </Field>
           </fieldset>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => nav('/risks')}>Cancel</Button>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => nav('/risks')}>Cancel</Button>
             <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>Register risk</Button>
           </div>
-        </Panel>
+        </Section>
       </form>
     </Page>
   );

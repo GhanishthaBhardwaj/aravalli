@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { type Errors, permit, SEVERITIES } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useData, useToast } from '../app/providers';
 import { reportIncident } from '../data/store';
-import { type Errors, permit, SEVERITIES } from '@aravalli/shared';
+import { AssigneeSelect } from '../components/incident/AssigneeSelect';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select, Textarea } from '../components/ui/fields';
-import { Panel, SearchableSelect } from '../components/ui/misc';
-import { AssigneeSelect } from '../components/incident/AssigneeSelect';
+import { Section } from '../components/ui/layout';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 export function IncidentNew() {
   const { ds, actor, act, clock } = useData();
@@ -23,10 +24,7 @@ export function IncidentNew() {
   const [errors, setErrors] = useState<Errors>({});
 
   const p = permit(actor, 'incident.report');
-  const riskOpts = useMemo(
-    () => ds.risks.map((r) => ({ value: String(r.risk_id), label: r.title, hint: r.risk_code })),
-    [ds.risks],
-  );
+  const riskOpts = useMemo(() => ds.risks.map((r) => ({ value: String(r.risk_id), label: r.title, hint: r.risk_code })), [ds.risks]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,9 +38,9 @@ export function IncidentNew() {
 
   return (
     <Page title="Report incident" description="Describe what happened. You can assign it and link a risk now or later.">
-      {!p.allowed && <p role="alert" className="panel mb-4 p-3 text-[13px]">{p.reason}</p>}
-      <form onSubmit={submit} noValidate className="max-w-3xl">
-        <Panel title="Incident details">
+      {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-accent pl-4 text-[15px]">{p.reason}</p>}
+      <form onSubmit={submit} noValidate className="max-w-2xl">
+        <Section title="Incident details">
           <fieldset disabled={!p.allowed} className="space-y-1">
             <Field label="Title" required error={errors.title}>
               {(f) => <Input {...f} value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} />}
@@ -50,7 +48,7 @@ export function IncidentNew() {
             <Field label="Description" required error={errors.description}>
               {(f) => <Textarea {...f} value={description} onChange={(e) => setDescription(e.target.value)} />}
             </Field>
-            <div className="grid gap-x-3 sm:grid-cols-2">
+            <div className="grid gap-x-4 sm:grid-cols-2">
               <Field label="Severity" required error={errors.severity}>
                 {(f) => <Select {...f} value={severity} onChange={(e) => setSeverity(e.target.value)} placeholder="Select…" options={[...SEVERITIES].reverse().map((s) => ({ value: s, label: s }))} />}
               </Field>
@@ -69,10 +67,10 @@ export function IncidentNew() {
             </Field>
           </fieldset>
           <div className="mt-4 flex justify-end gap-2">
-            <Button onClick={() => nav('/incidents')}>Cancel</Button>
+            <Button variant="ghost" onClick={() => nav('/incidents')}>Cancel</Button>
             <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>Report incident</Button>
           </div>
-        </Panel>
+        </Section>
       </form>
     </Page>
   );

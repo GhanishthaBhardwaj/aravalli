@@ -1,33 +1,34 @@
+import { motion } from 'motion/react';
 import { bandFor, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
 import type { HeatCell } from '../../data/selectors';
-import { SEV_COLOR, SEV_TEXT } from '../ui/Chip';
+import { BAND_CLASS } from '../ui/Badge';
+import { reducedMotion } from '../ui/CountUp';
 
 interface Props {
   cells: HeatCell[];
-  size?: 'sm' | 'lg';
   onSelect?: (c: HeatCell) => void;
   selected?: { likelihood: number; impact: number } | null;
   /** Cells appear in a diagonal wave, once. */
   reveal?: boolean;
 }
 
-/** A hazard board: solid signal colours, the number of risks in each cell, empty cells left quiet. */
-export function HeatMap({ cells, size = 'lg', onSelect, selected, reveal }: Props) {
-  const lg = size === 'lg';
-  const cell = lg ? 'h-[4.1rem] w-[4.1rem] sm:h-[4.6rem] sm:w-[4.6rem]' : 'h-11 w-11';
+/** 5×5 grid. Cell tone = risk band of its position (light grey, grey, dark, orange); the number is how many risks sit there. */
+export function HeatMap({ cells, onSelect, selected, reveal }: Props) {
+  const wave = reveal && !reducedMotion();
+  const size = 'h-[3.6rem] w-[3.6rem] sm:h-[4.4rem] sm:w-[4.4rem]';
   return (
     <div className="inline-block max-w-full">
       <div className="flex gap-2">
-        <div className="flex flex-col justify-between py-0.5">
+        <div className="flex flex-col gap-1.5">
           {[5, 4, 3, 2, 1].map((l) => (
-            <div key={l} className={`flex items-center justify-end gap-1.5 text-right ${lg ? 'h-[4.1rem] sm:h-[4.6rem]' : 'h-11'}`}>
-              {lg && <span className="hidden text-[12px] leading-tight text-muted sm:block">{LIKELIHOOD_LABELS[l - 1]}</span>}
-              <span className="w-3 text-[13px] font-medium text-ink">{l}</span>
+            <div key={l} className="flex h-[3.6rem] items-center justify-end gap-2 sm:h-[4.4rem]">
+              <span className="hidden text-[13px] text-muted sm:block">{LIKELIHOOD_LABELS[l - 1]}</span>
+              <span className="num w-3 text-right text-[13px] font-medium">{l}</span>
             </div>
           ))}
         </div>
         <div>
-          <div className="grid grid-cols-5 gap-1">
+          <div className="grid grid-cols-5 gap-1.5">
             {[5, 4, 3, 2, 1].flatMap((l) =>
               [1, 2, 3, 4, 5].map((i) => {
                 const c = cells[(l - 1) * 5 + (i - 1)];
@@ -35,42 +36,36 @@ export function HeatMap({ cells, size = 'lg', onSelect, selected, reveal }: Prop
                 const n = c.rows.length;
                 const on = selected?.likelihood === l && selected?.impact === i;
                 return (
-                  <button
+                  <motion.button
                     key={`${l}-${i}`}
                     type="button"
                     disabled={!onSelect}
                     onClick={() => onSelect?.(c)}
                     aria-pressed={onSelect ? on : undefined}
                     aria-label={`Likelihood ${l}, impact ${i}, ${band}, ${n} ${n === 1 ? 'risk' : 'risks'}`}
-                    className={`heat-cell flex items-center justify-center rounded-md ${cell} ${reveal ? 'tile-in' : ''} ${onSelect ? 'cursor-pointer' : 'cursor-default'}`}
-                    style={{
-                      background: SEV_COLOR[band],
-                      color: SEV_TEXT[band],
-                      opacity: n ? 1 : 0.38,
-                      outline: on ? '3px solid #16181d' : 'none',
-                      outlineOffset: 1,
-                      animationDelay: reveal ? `${(l - 1 + (i - 1)) * 55}ms` : undefined,
-                    }}
+                    className={`flex items-center justify-center rounded-lg ${BAND_CLASS[band]} ${size} ${onSelect ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
+                    style={{ outline: on ? '3px solid var(--fg)' : 'none', outlineOffset: 2 }}
+                    initial={wave ? { opacity: 0, scale: 0.6 } : false}
+                    animate={{ opacity: n ? 1 : 0.28, scale: 1 }}
+                    transition={{ duration: 0.3, delay: wave ? (l - 1 + (i - 1)) * 0.045 : 0, ease: [0.2, 0.7, 0.2, 1] }}
                   >
-                    {n > 0 && <span className={`display ${lg ? 'text-[24px]' : 'text-xl'} font-semibold leading-none tabular-nums`}>{n}</span>}
-                  </button>
+                    {n > 0 && <span className="num text-[24px] font-semibold leading-none">{n}</span>}
+                  </motion.button>
                 );
               }),
             )}
           </div>
-          <div className="mt-1.5 grid grid-cols-5 gap-1 text-center">
+          <div className="mt-2 grid grid-cols-5 gap-1.5 text-center">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="leading-tight">
-                <span className="text-[13px] font-medium">{i}</span>
-                {lg && <span className="hidden text-[12px] text-muted sm:block">{IMPACT_LABELS[i - 1]}</span>}
+                <span className="num text-[13px] font-medium">{i}</span>
+                <span className="hidden text-[12px] text-muted sm:block">{IMPACT_LABELS[i - 1]}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-4 pl-[4.5rem] text-[12px] text-muted">
-        <span>Likelihood runs up, impact runs right</span>
-      </div>
+      <p className="mt-3 pl-1 text-[13px] text-subtle">Likelihood runs up, impact runs right.</p>
     </div>
   );
 }

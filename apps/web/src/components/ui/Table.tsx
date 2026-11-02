@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, ChevronUpDownIcon } from '@heroicons/react/16/solid';
 import { Pagination } from './Pagination';
+import { ErrorState, Skeleton } from './states';
 
 export interface Column<T> {
   key: string;
@@ -23,10 +24,17 @@ interface Props<T> {
   pageSize?: number;
   defaultSort?: { key: string; dir: 'asc' | 'desc' };
   noun?: string;
+  /** Shown when there are no rows. */
   empty?: ReactNode;
+  loading?: boolean;
+  /** When set, replaces the table with an error state. */
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-export function Table<T>({ rows, columns, rowKey, rowHref, caption, urlState, pageSize, defaultSort, noun = 'rows', empty }: Props<T>) {
+export function Table<T>({
+  rows, columns, rowKey, rowHref, caption, urlState, pageSize, defaultSort, noun = 'rows', empty, loading, error, onRetry,
+}: Props<T>) {
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const [local, setLocal] = useState<{ sort?: string; dir: 'asc' | 'desc'; page: number }>({
@@ -69,11 +77,12 @@ export function Table<T>({ rows, columns, rowKey, rowHref, caption, urlState, pa
   const toggle = (key: string) =>
     setState(sortKey === key ? { dir: dir === 'asc' ? 'desc' : 'asc', page: 1 } : { sort: key, dir: 'asc', page: 1 });
 
-  if (!rows.length && empty) return <>{empty}</>;
+  if (error) return <ErrorState title="These rows could not be loaded" body={error} onRetry={onRetry} />;
+  if (!loading && !rows.length && empty) return <>{empty}</>;
 
   return (
     <div>
-      <div className="max-h-[70vh] overflow-auto">
+      <div className="max-h-[75vh] overflow-auto" aria-busy={loading || undefined}>
         <table className="tbl">
           <caption className="sr-only">{caption}</caption>
           <thead>
@@ -81,11 +90,11 @@ export function Table<T>({ rows, columns, rowKey, rowHref, caption, urlState, pa
               {columns.map((c) => {
                 const active = c.key === sortKey;
                 return (
-                  <th key={c.key} className={c.align === 'right' ? 'num' : ''} aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
+                  <th key={c.key} className={c.align === 'right' ? 'right' : ''} aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
                     {c.sort ? (
-                      <button type="button" onClick={() => toggle(c.key)} className="inline-flex items-center gap-1 hover:text-ink">
+                      <button type="button" onClick={() => toggle(c.key)} className="inline-flex items-center gap-1 hover:text-fg">
                         {c.header}
-                        {active ? (dir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
+                        {active ? (dir === 'asc' ? <ArrowUpIcon className="h-3.5 w-3.5" /> : <ArrowDownIcon className="h-3.5 w-3.5" />) : <ChevronUpDownIcon className="h-3.5 w-3.5 opacity-50" />}
                       </button>
                     ) : (
                       c.header
@@ -96,28 +105,32 @@ export function Table<T>({ rows, columns, rowKey, rowHref, caption, urlState, pa
             </tr>
           </thead>
           <tbody>
-            {view.map((r) => {
-              const href = rowHref?.(r);
-              return (
-                <tr
-                  key={rowKey(r)}
-                  className={href ? 'row-link' : ''}
-                  tabIndex={href ? 0 : undefined}
-                  onClick={href ? () => nav(href) : undefined}
-                  onKeyDown={href ? (e) => e.key === 'Enter' && nav(href) : undefined}
-                >
-                  {columns.map((c) => (
-                    <td key={c.key} className={c.align === 'right' ? 'num' : ''}>
-                      {c.render(r)}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
+            {loading
+              ? Array.from({ length: 6 }, (_, i) => (
+                  <tr key={i}>
+                    {columns.map((c) => <td key={c.key}><Skeleton className="h-4 w-full max-w-[160px]" /></td>)}
+                  </tr>
+                ))
+              : view.map((r) => {
+                  const href = rowHref?.(r);
+                  return (
+                    <tr
+                      key={rowKey(r)}
+                      className={href ? 'row-link' : ''}
+                      tabIndex={href ? 0 : undefined}
+                      onClick={href ? () => nav(href) : undefined}
+                      onKeyDown={href ? (e) => e.key === 'Enter' && nav(href) : undefined}
+                    >
+                      {columns.map((c) => (
+                        <td key={c.key} className={c.align === 'right' ? 'right' : ''}>{c.render(r)}</td>
+                      ))}
+                    </tr>
+                  );
+                })}
           </tbody>
         </table>
       </div>
-      {(urlState || pageSize) && (
+      {!loading && (urlState || pageSize) && (
         <Pagination total={sorted.length} page={cur} pages={pages} pageSize={pageSize ?? sorted.length} noun={noun} onPage={(p) => setState({ page: p })} />
       )}
     </div>

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { canClose, type Errors, type Incident, INCIDENT_TRANSITIONS, incidentNeedsNote, type IncidentStatus, isIncidentFinal, permit } from '@aravalli/shared';
+import {
+  canClose, type Errors, type Incident, INCIDENT_TRANSITIONS, incidentNeedsNote, type IncidentStatus, isIncidentFinal, permit,
+} from '@aravalli/shared';
 import { addIncidentUpdate } from '../../data/store';
 import { useData, useToast } from '../../app/providers';
 import { Field, Select, Textarea } from '../ui/fields';
@@ -26,15 +28,15 @@ export function UpdateComposer({ incident }: { incident: Incident }) {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-2">
-      {errors._form && <p role="alert" className="text-[var(--sev-critical)]">{errors._form}</p>}
+    <form onSubmit={submit} noValidate className="space-y-1">
+      {errors._form && <p role="alert" className="text-[14px] font-medium">{errors._form}</p>}
       <Field label={needsNote ? 'Resolution note' : 'Note'} required error={errors.update_text}>
-        {(f) => <Textarea {...f} rows={3} disabled={!p.allowed} value={text} onChange={(e) => setText(e.target.value)} placeholder="What happened, what was done, what is next…" />}
+        {(f) => <Textarea {...f} rows={3} disabled={!p.allowed} value={text} onChange={(e) => setText(e.target.value)} placeholder="What happened, what was done, what is next" />}
       </Field>
       <Field
         label="Change status"
         error={errors.status_to}
-        hint={next.length ? undefined : incident.status === 'Closed' ? 'Closed incidents are final.' : 'No status changes available to you.'}
+        hint={next.length ? undefined : final ? 'Closed incidents are final.' : 'No status changes available to you.'}
       >
         {(f) => (
           <Select
@@ -47,10 +49,8 @@ export function UpdateComposer({ incident }: { incident: Incident }) {
           />
         )}
       </Field>
-      <div className="flex justify-end">
-        <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>
-          Post update
-        </Button>
+      <div className="flex justify-end pt-2">
+        <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>Post update</Button>
       </div>
     </form>
   );

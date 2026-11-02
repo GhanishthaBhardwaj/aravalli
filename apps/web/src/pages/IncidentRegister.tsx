@@ -1,21 +1,19 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { PlusIcon } from '@heroicons/react/20/solid';
+import { INCIDENT_STATUSES, SEVERITIES, SEVERITY_ORDER } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useData } from '../app/providers';
 import { useFilters } from '../app/useFilters';
-import { fullName, incidentRows } from '../data/selectors';
-import type { IncidentRow } from '../data/selectors';
-import { INCIDENT_STATUSES, SEVERITIES, SEVERITY_ORDER } from '@aravalli/shared';
-import { Button } from '../components/ui/Button';
-import { SeverityChip, StatusChip } from '../components/ui/Chip';
-import { FilterSearch, FilterSelect } from '../components/ui/FilterControls';
-import { ClearFilters, CodeLink, EmptyState } from '../components/ui/misc';
-import { Table } from '../components/ui/Table';
-import type { Column } from '../components/ui/Table';
+import { fullName, incidentRows, type IncidentRow } from '../data/selectors';
 import { PersonName } from '../components/ui/Avatar';
+import { SeverityBadge, StatusBadge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { FilterSearch, FilterSelect } from '../components/ui/FilterControls';
+import { Card, IdLink } from '../components/ui/layout';
+import { EmptyState } from '../components/ui/states';
+import { Table, type Column } from '../components/ui/Table';
 
-// `department` comes from a link on the Departments page and is not shown as a control.
+// `department` arrives from a link on the Departments page and is not shown as a control.
 const KEYS = ['q', 'severity', 'status', 'department', 'assignee'];
 
 export function IncidentRegister() {
@@ -40,30 +38,30 @@ export function IncidentRegister() {
     .sort((a, b) => a.last_name.localeCompare(b.last_name));
 
   const cols: Column<IncidentRow>[] = [
-    { key: 'code', header: 'Code', sort: (r) => r.incident.incident_code, render: (r) => <CodeLink to={`/incidents/${r.incident.incident_code}`}>{r.incident.incident_code}</CodeLink> },
-    { key: 'title', header: 'Incident', sort: (r) => r.incident.title, render: (r) => <span className="block max-w-[40ch] truncate" title={r.incident.title}>{r.incident.title}</span> },
-    { key: 'sev', header: 'Severity', sort: (r) => SEVERITY_ORDER[r.incident.severity], render: (r) => <SeverityChip severity={r.incident.severity} /> },
-    { key: 'status', header: 'Status', sort: (r) => INCIDENT_STATUSES.indexOf(r.incident.status), render: (r) => <StatusChip status={r.incident.status} /> },
+    { key: 'code', header: 'Code', sort: (r) => r.incident.incident_code, render: (r) => <IdLink to={`/incidents/${r.incident.incident_code}`}>{r.incident.incident_code}</IdLink> },
+    { key: 'title', header: 'Incident', sort: (r) => r.incident.title, render: (r) => <span className="block max-w-[40ch] truncate font-medium" title={r.incident.title}>{r.incident.title}</span> },
+    { key: 'sev', header: 'Severity', sort: (r) => SEVERITY_ORDER[r.incident.severity], render: (r) => <SeverityBadge severity={r.incident.severity} /> },
+    { key: 'status', header: 'Status', sort: (r) => INCIDENT_STATUSES.indexOf(r.incident.status), render: (r) => <StatusBadge status={r.incident.status} /> },
     { key: 'asg', header: 'Assignee', sort: (r) => r.assignee?.last_name ?? null, render: (r) => <PersonName person={r.assignee} /> },
-    { key: 'risk', header: 'Risk', sort: (r) => r.risk?.risk_code ?? null, render: (r) => (r.risk ? <CodeLink to={`/risks/${r.risk.risk_code}`}>{r.risk.risk_code}</CodeLink> : <span className="text-muted">None</span>) },
-    { key: 'age', header: 'Age', align: 'right', sort: (r) => r.ageDays, render: (r) => <span className="mono">{r.ageDays}d</span> },
+    { key: 'risk', header: 'Risk', sort: (r) => r.risk?.risk_code ?? null, render: (r) => (r.risk ? <IdLink to={`/risks/${r.risk.risk_code}`}>{r.risk.risk_code}</IdLink> : <span className="text-subtle">None</span>) },
+    { key: 'age', header: 'Age', align: 'right', sort: (r) => r.ageDays, render: (r) => <span className="num">{r.ageDays}d</span> },
   ];
 
   return (
     <Page
       title="Incident Register"
       description="Reported incidents and where each one stands."
-      actions={<Link to="/incidents/new"><Button variant="primary"><Plus size={16} aria-hidden="true" /> Report incident</Button></Link>}
+      actions={<Button variant="primary" to="/incidents/new"><PlusIcon className="h-4 w-4" aria-hidden="true" /> Report incident</Button>}
     >
-      <div className="panel mb-4 flex flex-wrap items-end gap-3 p-3">
+      <div className="mb-6 flex flex-wrap items-end gap-4">
         <FilterSearch label="Search" value={f.get('q')} onChange={(v) => f.set('q', v)} />
         <FilterSelect label="Severity" value={f.get('severity')} onChange={(v) => f.set('severity', v)} options={[...SEVERITIES].reverse().map((s) => ({ value: s, label: s }))} />
         <FilterSelect label="Status" value={f.get('status')} onChange={(v) => f.set('status', v)} options={INCIDENT_STATUSES.map((s) => ({ value: s, label: s }))} />
         <FilterSelect label="Assignee" value={f.get('assignee')} onChange={(v) => f.set('assignee', v)}
           options={[{ value: 'none', label: 'Unassigned' }, ...assignees.map((e) => ({ value: String(e.employee_id), label: fullName(e) }))]} />
-        {f.active && <ClearFilters onClick={f.clear} />}
+        {f.active && <Button variant="ghost" onClick={f.clear}>Clear filters</Button>}
       </div>
-      <div className="panel overflow-hidden">
+      <Card className="overflow-hidden">
         <Table
           rows={rows}
           columns={cols}
@@ -74,9 +72,9 @@ export function IncidentRegister() {
           pageSize={20}
           noun="incidents"
           defaultSort={{ key: 'code', dir: 'desc' }}
-          empty={<EmptyState title="No incidents match these filters" action={<ClearFilters onClick={f.clear} />} />}
+          empty={<EmptyState title="No incidents match these filters" body="Remove a filter or widen the search." action={<Button onClick={f.clear}>Clear filters</Button>} />}
         />
-      </div>
+      </Card>
     </Page>
   );
 }

@@ -74,7 +74,7 @@ test('assessing a risk twice grows its history and moves the heat map', async ({
   await open(page, '/risks/heatmap');
   await page.getByRole('button', { name: /Likelihood 5, impact 5/ }).click();
   await expect(page.getByText('RSK-0027')).toBeVisible();
-  await page.getByRole('button', { name: 'As of first assessment' }).click();
+  await page.getByRole('tab', { name: 'As of first assessment' }).click();
   await page.getByRole('button', { name: /Likelihood 2, impact 3/ }).click();
   await expect(page.getByText('RSK-0027')).toBeVisible();
 });

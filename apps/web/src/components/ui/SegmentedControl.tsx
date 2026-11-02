@@ -9,40 +9,38 @@ interface Props {
   clearable?: boolean;
 }
 
-/** Native radios, so arrow-key navigation and screen-reader semantics come for free. */
+/** Native radios, so arrow keys and screen readers work for free. */
 export function SegmentedControl({ legend, labels, value, onChange, error, clearable }: Props) {
   const name = useId();
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-1 flex w-full items-center justify-between text-[13px] font-medium">
+      <legend className="mb-1.5 flex w-full items-center justify-between text-[14px] font-medium">
         <span>{legend}</span>
         {clearable && value !== null && (
-          <button type="button" className="text-xs text-accent underline" onClick={() => onChange(null)}>
+          <button type="button" className="text-[13px] font-normal text-muted underline underline-offset-2 hover:text-fg" onClick={() => onChange(null)}>
             Clear
           </button>
         )}
       </legend>
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-5 gap-1.5">
         {labels.map((label, i) => {
           const v = i + 1;
           const on = value === v;
           return (
             <label
               key={v}
-              className={`cursor-pointer rounded-lg border px-1 py-2 text-center transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent)] ${
-                on ? 'border-signal bg-signal text-white' : 'border-[#d0d5dd] bg-surface hover:bg-[var(--hover)]'
+              className={`cursor-pointer rounded-lg border px-1 py-2 text-center transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--fg)] ${
+                on ? 'border-fg bg-fg text-bg' : 'border-line-strong bg-surface hover:bg-surface-2'
               }`}
             >
               <input type="radio" className="sr-only" name={name} checked={on} onChange={() => onChange(v)} />
-              <span className="block text-[16px] font-semibold leading-6">{v}</span>
-              <span className="block text-[11px] leading-tight">{label}</span>
+              <span className="num block text-[17px] font-semibold leading-6">{v}</span>
+              <span className="block text-[11.5px] leading-tight">{label}</span>
             </label>
           );
         })}
       </div>
-      <div aria-live="polite" className="min-h-[18px] pt-1 text-xs text-[var(--sev-critical)]">
-        {error}
-      </div>
+      <div aria-live="polite" className="min-h-[22px] pt-1 text-[13px] font-medium">{error}</div>
     </fieldset>
   );
 }

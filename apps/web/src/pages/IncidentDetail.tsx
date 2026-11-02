@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { type Errors, isIncidentFinal, permit } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useData, useToast } from '../app/providers';
+import { fmtDateTime } from '../app/format';
 import { NotFound } from './NotFound';
 import { fullName, incidentAgeDays, updatesFor } from '../data/selectors';
 import { assignIncident, linkRisk } from '../data/store';
-import { type Errors, isIncidentFinal, permit } from '@aravalli/shared';
-import { Button } from '../components/ui/Button';
-import { SeverityChip, StatusChip } from '../components/ui/Chip';
-import { Field } from '../components/ui/fields';
-import { Fact, Panel, SearchableSelect } from '../components/ui/misc';
 import { AssigneeSelect } from '../components/incident/AssigneeSelect';
 import { UpdateComposer } from '../components/incident/UpdateComposer';
 import { UpdateTimeline } from '../components/incident/UpdateTimeline';
-import { fmtDateTime } from '../app/format';
+import { SeverityBadge, StatusBadge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Field } from '../components/ui/fields';
+import { Fact, Section } from '../components/ui/layout';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 export function IncidentDetail() {
   const { code } = useParams();
@@ -40,6 +41,7 @@ function Inner({ code }: { code: string }) {
   const FINAL = 'Closed incidents are final.';
   const assignReason = pAssign.allowed ? (closed ? FINAL : undefined) : pAssign.reason;
   const linkReason = pLink.allowed ? (closed ? FINAL : undefined) : pLink.reason;
+  const days = incidentAgeDays(inc, clock);
 
   const saveAssign = () => {
     const r = act((d, who, c) => assignIncident(d, inc.incident_id, assignee, who, c));
@@ -55,65 +57,51 @@ function Inner({ code }: { code: string }) {
   };
 
   return (
-    <Page title={`${inc.incident_code} · ${inc.title}`}>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="mono text-sm font-medium">{inc.incident_code}</span>
-        <SeverityChip severity={inc.severity} />
-        <StatusChip status={inc.status} />
-        <span className="text-[14px] text-muted">{['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} {incidentAgeDays(inc, clock)} {incidentAgeDays(inc, clock) === 1 ? 'day' : 'days'}</span>
+    <Page title={inc.title} code={inc.incident_code}>
+      <div className="-mt-6 mb-12 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <SeverityBadge severity={inc.severity} />
+        <StatusBadge status={inc.status} />
+        <span className="text-[14px] text-muted">{['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} <span className="num">{days}</span> {days === 1 ? 'day' : 'days'}</span>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-        <div className="space-y-4">
-          <Panel title="Facts">
-            <dl className="space-y-3">
+      <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-12">
+          <Section title="Details">
+            <dl className="space-y-5">
               <Fact label="Department">{dept?.name}</Fact>
               <Fact label="Reported by">{fullName(reporter)}</Fact>
-              <Fact label="Assigned to">{assigned ? fullName(assigned) : <span className="text-muted">Unassigned</span>}</Fact>
-              <Fact label="Linked risk">{risk ? <Link to={`/risks/${risk.risk_code}`} className="mono text-[12px] underline">{risk.risk_code}</Link> : <span className="text-muted">None</span>}</Fact>
+              <Fact label="Assigned to">{assigned ? fullName(assigned) : <span className="text-subtle">Unassigned</span>}</Fact>
+              <Fact label="Linked risk">{risk ? <Link to={`/risks/${risk.risk_code}`} className="num text-[14px] underline underline-offset-4">{risk.risk_code}</Link> : <span className="text-subtle">None</span>}</Fact>
               <Fact label="Occurred">{fmtDateTime(inc.occurred_at)}</Fact>
               <Fact label="Reported">{fmtDateTime(inc.reported_at)}</Fact>
               <Fact label="Resolved">{fmtDateTime(inc.resolved_at)}</Fact>
-              <Fact label="Description"><p className="text-[13px]">{inc.description}</p></Fact>
+              <Fact label="Description"><p className="text-[14px] leading-6 text-muted">{inc.description}</p></Fact>
             </dl>
-          </Panel>
+          </Section>
 
-          <Panel title="Assignment">
+          <Section title="Assignment">
             <Field label="Assignee" error={errors.assigned_to}>
               {(f) => <AssigneeSelect id={f.id} employees={ds.employees} value={assignee} onChange={setAssignee} invalid={f['aria-invalid']} />}
             </Field>
-            <Button onClick={saveAssign} disabledReason={assignReason}>
-              {assigned ? 'Reassign' : 'Assign'}
-            </Button>
-          </Panel>
+            <Button onClick={saveAssign} disabledReason={assignReason}>{assigned ? 'Reassign' : 'Assign'}</Button>
+          </Section>
 
-          <Panel title="Linked risk">
+          <Section title="Linked risk">
             <Field label="Risk" error={errors.risk_id}>
               {(f) => <SearchableSelect id={f.id} options={riskOpts} value={riskId} onChange={setRiskId} placeholder="No linked risk" disabled={!pLink.allowed || closed} invalid={f['aria-invalid']} />}
             </Field>
             <div className="flex gap-2">
-              <Button onClick={() => saveLink(riskId ? Number(riskId) : null)} disabledReason={linkReason}>
-                {risk ? 'Change link' : 'Link risk'}
-              </Button>
-              {risk && (
-                <Button
-                  onClick={() => { setRiskId(null); saveLink(null); }}
-                  disabledReason={linkReason}
-                >
-                  Unlink
-                </Button>
-              )}
+              <Button onClick={() => saveLink(riskId ? Number(riskId) : null)} disabledReason={linkReason}>{risk ? 'Change link' : 'Link risk'}</Button>
+              {risk && <Button variant="ghost" onClick={() => { setRiskId(null); saveLink(null); }} disabledReason={linkReason}>Unlink</Button>}
             </div>
-          </Panel>
+          </Section>
         </div>
 
-        <div className="space-y-4">
-          <Panel title="Add update">
-            <UpdateComposer incident={inc} />
-          </Panel>
-          <Panel title="Update timeline (newest first)">
+        <div className="min-w-0 space-y-12">
+          <Section title="Add update"><UpdateComposer incident={inc} /></Section>
+          <Section title="Timeline, newest first">
             <UpdateTimeline updates={updatesFor(ds, inc.incident_id)} employees={ds.employees} />
-          </Panel>
+          </Section>
         </div>
       </div>
     </Page>
