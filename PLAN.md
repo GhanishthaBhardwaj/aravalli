@@ -135,3 +135,53 @@ Done when: every screen works in the browser and at 360px width, the new design 
 every screen, the schema runs cleanly on MySQL, and all tests pass. Then commit,
 summarise what changed (including the bug list), give a manual checklist, update
 docs/INTERVIEW-GUIDE.md, and STOP.
+
+
+---
+
+## Decision: the demo uses two organisations filled with real public data (Phases 2 and 3)
+
+The demo will have **two organisations populated with real public incident records**. They are demonstration tenants, not
+customers.
+
+| | Org 1: an IT services company | Org 2: a manufacturing company |
+| --- | --- | --- |
+| Source | UCI Machine Learning Repository, "Incident management process enriched event log" (real ServiceNow data, about 24,900 incidents) | OSHA Severe Injury Reports (real workplace injury narratives, US public data) |
+| Licence / terms | CC BY 4.0 (as stated by UCI): attribution required | US public data: confirm the exact terms and wording on OSHA's data page when the importer is built |
+
+### Phase 2 (backend and database)
+
+1. **Import scripts**, one per source, mapping each source record to an Aravalli incident: title, description, severity,
+   department, dates and status. The source ID is **kept on every imported row** (a source-ID column) so any incident can be
+   traced back to its original record. Imports are repeatable and idempotent.
+2. **A realistic, hand-made risk register per organisation**, linked to the imported incidents (hand-made, not generated from the sources).
+3. **The small sample seed stays for unit tests only.** The demo is the two real-data organisations.
+4. **Measure on the real volume.** Check the indexes against about 25,000 incidents, and record the timings of the main queries and API calls.
+
+Points to settle before importing (written down now so they are not forgotten; none changes the decision):
+
+- **Field fit.** Neither source was designed for Aravalli. Expect to derive some fields: the UCI log is a stream of state changes and,
+  as far as I know, carries anonymised category codes rather than free-text titles, so titles and descriptions will be built from the
+  category fields. The OSHA records have narratives but no assignee and no workflow. Check both files before fixing the mapping.
+- **Lifecycle.** Imported state histories will not always follow Aravalli's allowed status transitions. The importer should write
+  directly, keep the original state in the update text, and make sure the final status and `resolved_at` satisfy the database rules.
+- **Departments.** Source groupings (assignment groups, industry sectors) must be reduced to a sensible set of departments.
+- **Employer names (OSHA).** The records name real employers. Do not attach real employer names or addresses to one fictional
+  manufacturer's incident log: keep the incident facts, industry and state, and keep the source ID for traceability.
+- **People.** Anonymised or invented names only; no real individual is identified.
+
+### Phase 3 (authentication and multi-tenancy)
+
+- The two organisations are what **proves tenant isolation**: one person from each, and tests showing neither can see, change or
+  reference the other's data through the API.
+- **Demo logins for each organisation**, with the role set from the plan (Org Admin, Risk Officer, Department Head, Auditor, Employee).
+- Isolation tests run on the real volume, and the README reports **query and API performance on that volume**.
+
+### README requirements (when the data is imported)
+
+- Say, in these words, that the demo organisations are **"populated with real public incident records"**.
+- **Credit both sources with their licences** (UCI: CC BY 4.0; OSHA: its published terms).
+- **Never claim the organisations are real customers.** They are demonstration organisations built from public data.
+- Report query and API performance on the real volume.
+
+(The README does not make any of these claims yet, because no real data has been imported.)
