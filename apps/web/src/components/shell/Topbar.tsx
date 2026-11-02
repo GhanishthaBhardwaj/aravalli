@@ -100,8 +100,8 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
             return (
-              <span key={c.label} className="flex min-w-0 items-center gap-1.5">
-                {i > 0 && <ChevronRightIcon className="h-4 w-4 shrink-0 text-subtle" aria-hidden="true" />}
+              <span key={c.label} className={`min-w-0 items-center gap-1.5 ${i < crumbs.length - 2 ? 'hidden md:flex' : 'flex'}`}>
+                {i > 0 && <ChevronRightIcon className={`h-4 w-4 shrink-0 text-subtle ${i === crumbs.length - 2 ? 'hidden md:block' : ''}`} aria-hidden="true" />}
                 {c.to ? (
                   <Link to={c.to} className="truncate text-muted hover:text-fg">{c.label}</Link>
                 ) : (

@@ -3,14 +3,28 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const FILE = /^(\d{4})_([a-z0-9_]+)\.sql$/;
-const pad = (n) => String(n).padStart(4, '0');
+const pad = (n: number) => String(n).padStart(4, '0');
+
+export interface Migration {
+  version: number;
+  name: string;
+  file: string;
+  sql: string;
+  checksum: string;
+}
+
+/** A row of the schema_migrations table. */
+export interface AppliedMigration {
+  version: number;
+  name: string;
+  checksum: string;
+}
 
 /**
  * Reads NNNN_name.sql files in order. Numbers must start at 0001 and have no gaps,
  * so "what has run" is always a simple prefix of the list.
- * @returns {{ version: number, name: string, file: string, sql: string, checksum: string }[]}
  */
-export function listMigrations(dir) {
+export function listMigrations(dir: string): Migration[] {
   const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
   let expected = 1;
   return files.map((file) => {
@@ -26,14 +40,9 @@ export function listMigrations(dir) {
   });
 }
 
-/**
- * @param {{ version: number, name: string, file: string, checksum: string }[]} all  every migration file
- * @param {{ version: number, name: string, checksum: string }[]} applied  rows from schema_migrations
- * @returns {{ pending: typeof all, problems: string[] }}
- */
-export function planMigrations(all, applied) {
+export function planMigrations(all: Migration[], applied: AppliedMigration[]): { pending: Migration[]; problems: string[] } {
   const byVersion = new Map(all.map((m) => [m.version, m]));
-  const problems = [];
+  const problems: string[] = [];
   for (const a of applied) {
     const m = byVersion.get(a.version);
     if (!m) problems.push(`Migration ${pad(a.version)}_${a.name} was applied but its file is missing.`);

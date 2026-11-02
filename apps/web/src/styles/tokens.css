@@ -98,7 +98,7 @@
 
 @layer components {
   /* IDs and numbers */
-  .num { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .num { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; }
 
   /* risk bands */
   .band-low { background: var(--band-low-bg); color: var(--band-low-fg); }
@@ -117,6 +117,9 @@
   .tbl tbody tr.row-link { cursor: pointer; transition: background-color 120ms var(--ease); }
   .tbl tbody tr.row-link:hover, .tbl tbody tr.row-link:focus-visible { background: var(--surface-2); }
   .tbl .right { text-align: right; }
+  @media (max-width: 640px) {
+    .tbl th, .tbl td { padding-left: 12px; padding-right: 12px; }
+  }
 
   /* form controls */
   .control {

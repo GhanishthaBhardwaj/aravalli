@@ -1,19 +1,22 @@
 // Generates database/seeds/demo-organisation.sql from the shared sample dataset, so the database and the
-// web demo hold exactly the same data.   Run: npm run db:seed-sql   (needs tsx, which runs the TypeScript seed)
+// web demo hold exactly the same data.   Run: npm run db:seed-sql
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { seed } from '@aravalli/shared';
 
-const q = (v) => {
+type Cell = string | number | boolean | null | undefined;
+type Row = Record<string, Cell>;
+
+const q = (v: Cell) => {
   if (v === null || v === undefined) return 'NULL';
   if (typeof v === 'number') return String(v);
   if (typeof v === 'boolean') return v ? '1' : '0';
   return `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 };
-const ts = (s) => (s === null ? null : s.replace('T', ' ').slice(0, 19));
+const ts = (s: string | null) => (s === null ? null : s.replace('T', ' ').slice(0, 19));
 
-function insert(table, cols, rows, map = (r) => r) {
+function insert<T extends object>(table: string, cols: string[], rows: T[], map: (r: T) => Row = (r) => r as unknown as Row) {
   if (!rows.length) return '';
   const lines = rows.map((r) => {
     const m = map(r);

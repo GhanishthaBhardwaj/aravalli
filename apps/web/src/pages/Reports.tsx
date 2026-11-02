@@ -150,10 +150,10 @@ export function Reports() {
                   { key: 't', header: 'Incident', render: (r) => <span className="block max-w-[36ch] truncate font-medium" title={r.incident.title}>{r.incident.title}</span> },
                   { key: 's', header: 'Severity', render: (r) => <SeverityBadge severity={r.incident.severity} /> },
                   { key: 'st', header: 'Status', render: (r) => <StatusBadge status={r.incident.status} /> },
-                  { key: 'd', header: 'Department', render: (r) => r.department.name },
-                  { key: 'a', header: 'Assignee', render: (r) => (r.assignee ? fullName(r.assignee) : <strong className="font-semibold">Unassigned</strong>) },
+                  { key: 'd', header: 'Department', hideBelow: 'md', render: (r) => r.department.name },
+                  { key: 'a', header: 'Assignee', hideBelow: 'md', render: (r) => (r.assignee ? fullName(r.assignee) : <strong className="font-semibold">Unassigned</strong>) },
                   { key: 'r', header: 'Linked risk', render: (r) => r.risk?.risk_code ?? <strong className="font-semibold">None</strong> },
-                  { key: 'o', header: 'Occurred', render: (r) => fmtDate(r.incident.occurred_at) },
+                  { key: 'o', header: 'Occurred', hideBelow: 'md', render: (r) => fmtDate(r.incident.occurred_at) },
                 ]}
               />
             </Card>

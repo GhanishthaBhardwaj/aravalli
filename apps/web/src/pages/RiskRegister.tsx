@@ -38,11 +38,11 @@ export function RiskRegister() {
 
   const cols: Column<RiskRow>[] = [
     { key: 'code', header: 'Code', sort: (r) => r.risk.risk_code, render: (r) => <IdLink to={`/risks/${r.risk.risk_code}`}>{r.risk.risk_code}</IdLink> },
-    { key: 'title', header: 'Risk', sort: (r) => r.risk.title, render: (r) => <span className="block max-w-[44ch] truncate font-medium" title={r.risk.title}>{r.risk.title}</span> },
-    { key: 'dept', header: 'Department', sort: (r) => r.department.name, render: (r) => r.department.name },
-    { key: 'owner', header: 'Owner', sort: (r) => r.owner.last_name, render: (r) => <PersonName person={r.owner} /> },
+    { key: 'title', header: 'Risk', sort: (r) => r.risk.title, render: (r) => <span className="block max-w-[22ch] font-medium md:max-w-[44ch] md:truncate" title={r.risk.title}>{r.risk.title}</span> },
+    { key: 'dept', header: 'Department', hideBelow: 'md', sort: (r) => r.department.name, render: (r) => r.department.name },
+    { key: 'owner', header: 'Owner', hideBelow: 'md', sort: (r) => r.owner.last_name, render: (r) => <PersonName person={r.owner} /> },
     { key: 'score', header: 'Score', sort: (r) => r.score, render: (r) => <ScoreBadge score={r.score} band={r.band} /> },
-    { key: 'status', header: 'Status', sort: (r) => r.risk.status, render: (r) => <StatusBadge status={r.risk.status} /> },
+    { key: 'status', header: 'Status', hideBelow: 'md', sort: (r) => r.risk.status, render: (r) => <StatusBadge status={r.risk.status} /> },
   ];
 
   const p = permit(actor, 'risk.register');

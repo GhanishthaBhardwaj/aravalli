@@ -2,14 +2,14 @@
 //   npm run db:migrate            apply every pending migration
 //   npm run db:status             show which migrations have run
 //   npm run db:seed               load the sample organisation
-//   npm run db:reset              drop and recreate the database (dev/test databases only)
-// Connection details come from .env (see .env.example).
+//   npm run db:reset -- --yes     drop the database (dev/test databases only)
+// Connection details come from .env (see .env.example); real environment variables win over the file.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isDisposableDatabase, readDbConfig } from './config.mjs';
-import { listMigrations, planMigrations } from './migrations.mjs';
-import { runMysql } from './mysql.mjs';
+import { isDisposableDatabase, readDbConfig, type DbConfig } from './config';
+import { listMigrations, planMigrations, type AppliedMigration } from './migrations';
+import { runMysql, type MysqlResult } from './mysql';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
 const repoRoot = join(apiRoot, '..', '..');
@@ -21,24 +21,24 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const [command = 'up', ...flags] = process.argv.slice(2);
 
-function fail(message) {
+function fail(message: string): never {
   console.error(`\n${message}`);
   process.exit(1);
 }
 
-function must(result, what) {
+function must(result: MysqlResult, what: string): MysqlResult {
   if (!result.ok) fail(`${what} failed:\n${result.stderr}`);
   return result;
 }
 
-let config;
+let config: DbConfig;
 try {
   config = readDbConfig(process.env);
 } catch (e) {
-  fail(e.message);
+  fail((e as Error).message);
 }
 
-const q = (sql, opts = {}) => runMysql(config, sql, opts);
+const q = (sql: string, opts: { database?: boolean; query?: boolean } = {}) => runMysql(config, sql, opts);
 
 function ensureDatabase() {
   must(q(`CREATE DATABASE IF NOT EXISTS \`${config.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;`, { database: false }), `Creating database ${config.database}`);
@@ -50,7 +50,7 @@ function ensureDatabase() {
   ) ENGINE = InnoDB;`), 'Creating schema_migrations');
 }
 
-function appliedRows() {
+function appliedRows(): AppliedMigration[] {
   const r = must(q('SELECT version, name, checksum FROM schema_migrations ORDER BY version;', { query: true }), 'Reading schema_migrations');
   return r.stdout.split('\n').filter(Boolean).map((line) => {
     const [version, name, checksum] = line.split('\t');
@@ -74,9 +74,10 @@ if (command === 'up') {
 } else if (command === 'status') {
   ensureDatabase();
   const all = listMigrations(migrationsDir);
-  const applied = new Map(appliedRows().map((a) => [a.version, a]));
-  for (const m of all) console.log(`${applied.has(m.version) ? 'applied ' : 'pending '} ${m.file}`);
-  const { problems } = planMigrations(all, [...applied.values()]);
+  const applied = appliedRows();
+  const done = new Set(applied.map((a) => a.version));
+  for (const m of all) console.log(`${done.has(m.version) ? 'applied ' : 'pending '} ${m.file}`);
+  const { problems } = planMigrations(all, applied);
   if (problems.length) fail(problems.join('\n'));
 } else if (command === 'seed') {
   if (!existsSync(seedFile)) fail(`Seed file not found: ${seedFile}\nGenerate it with: npm run db:seed-sql`);

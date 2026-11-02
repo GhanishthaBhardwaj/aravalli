@@ -11,9 +11,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { seed } from '@aravalli/shared';
-import { readDbConfig } from './config.mjs';
-import { listMigrations } from './migrations.mjs';
-import { runMysql } from './mysql.mjs';
+import { readDbConfig } from './config';
+import { listMigrations } from './migrations';
+import { runMysql } from './mysql';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
 const repoRoot = join(apiRoot, '..', '..');
@@ -25,8 +25,8 @@ const config = { ...base, database: verifyDb };
 const reportFlag = process.argv.indexOf('--report');
 const reportPath = reportFlag > -1 ? resolve(process.argv[reportFlag + 1]) : null;
 
-const run = (sql, opts) => runMysql(config, sql, opts);
-const one = (sql) => run(sql, { query: true }).stdout.trim();
+const run = (sql: string, opts?: { database?: boolean; query?: boolean }) => runMysql(config, sql, opts);
+const one = (sql: string) => run(sql, { query: true }).stdout.trim();
 
 // ---------------------------------------------------------------- build the database
 const setup = runMysql(config, `DROP DATABASE IF EXISTS \`${verifyDb}\`; CREATE DATABASE \`${verifyDb}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;`, { database: false });
@@ -52,17 +52,20 @@ const version = one('SELECT VERSION();');
 // ---------------------------------------------------------------- the checks
 const ORG1 = `(SELECT organisation_id FROM organisation WHERE slug = 'aravalli-industries')`;
 const ORG2 = `(SELECT organisation_id FROM organisation WHERE slug = 'verify-co')`;
-const dept = (org, code) => `(SELECT department_id FROM department WHERE organisation_id = ${org} AND code = '${code}')`;
-const emp = (org, code) => `(SELECT employee_id FROM employee WHERE organisation_id = ${org} AND employee_code = '${code}')`;
-const risk = (org, code) => `(SELECT risk_id FROM risk WHERE organisation_id = ${org} AND risk_code = '${code}')`;
-const inc = (org, code) => `(SELECT incident_id FROM incident WHERE organisation_id = ${org} AND incident_code = '${code}')`;
+const dept = (org: string, code: string) => `(SELECT department_id FROM department WHERE organisation_id = ${org} AND code = '${code}')`;
+const emp = (org: string, code: string) => `(SELECT employee_id FROM employee WHERE organisation_id = ${org} AND employee_code = '${code}')`;
+const risk = (org: string, code: string) => `(SELECT risk_id FROM risk WHERE organisation_id = ${org} AND risk_code = '${code}')`;
+const inc = (org: string, code: string) => `(SELECT incident_id FROM incident WHERE organisation_id = ${org} AND incident_code = '${code}')`;
 
-const OK = { ok: true };
-const reject = (pattern) => ({ reject: pattern });
+type Expectation = { ok: true } | { reject: RegExp } | { value: { sql: string; expected: string } };
+interface Check { group: string; name: string; sql: string; expect: Expectation }
+
+const OK: Expectation = { ok: true };
+const reject = (pattern: RegExp): Expectation => ({ reject: pattern });
 
 /** group, name, sql, expectation. Positive controls come first so the later checks have rows to attack. */
-const checks = [];
-const add = (group, name, sql, expect) => checks.push({ group, name, sql, expect });
+const checks: Check[] = [];
+const add = (group: string, name: string, sql: string, expect: Expectation) => { checks.push({ group, name, sql, expect }); };
 
 // Setup of a second organisation, which also proves per-organisation uniqueness.
 add('Tenancy: allowed', 'a second organisation can be created', `INSERT INTO organisation (name, slug) VALUES ('Verify Co', 'verify-co');`, OK);
@@ -129,9 +132,8 @@ add('Triggers: rejected', 'updating a risk assessment (history is append-only)',
 add('Triggers: rejected', 'deleting a risk assessment', `DELETE FROM risk_assessment WHERE organisation_id = ${ORG1} LIMIT 1;`, reject(/ERROR 1644.*risk_assessment history is append-only/s));
 add('Triggers: rejected', 'updating an incident update', `UPDATE incident_update SET update_text = 'Edited' WHERE organisation_id = ${ORG1} LIMIT 1;`, reject(/ERROR 1644.*incident_update is append-only/s));
 add('Triggers: rejected', 'deleting an incident update', `DELETE FROM incident_update WHERE organisation_id = ${ORG1} LIMIT 1;`, reject(/ERROR 1644.*incident_update is append-only/s));
-add('Triggers: rejected', 'a risk whose owner works in a different department', `INSERT INTO risk (organisation_id, risk_code, title, description, category, department_id, owner_employee_id, identified_date)
-  VALUES (${ORG1}, 'RSK-9002', 'Wrong department owner', 'Owner is in Finance, risk is in IT.', 'Technology', ${dept(ORG1, 'IT')}, ${emp(ORG1, 'EMP-1001')}, '2026-01-12');`, reject(/ERROR 1644.*risk owner must belong to the risk department/s));
-add('Triggers: rejected', 're-pointing an existing risk at a department its owner is not in', `UPDATE risk SET department_id = ${dept(ORG1, 'IT')} WHERE organisation_id = ${ORG1} AND risk_code = 'RSK-0001';`, reject(/ERROR 1644.*risk owner must belong to the risk department/s));
+add('Constraints: allowed', 'a risk can be owned by someone from another department (a Risk Officer can own risks across departments)', `INSERT INTO risk (organisation_id, risk_code, title, description, category, department_id, owner_employee_id, identified_date)
+  VALUES (${ORG1}, 'RSK-9002', 'Cross department owner', 'Owner is in Finance, risk is in IT.', 'Technology', ${dept(ORG1, 'IT')}, ${emp(ORG1, 'EMP-1001')}, '2026-01-12');`, OK);
 
 add('Delete protection: rejected', 'deleting an employee who owns risks', `DELETE FROM employee WHERE organisation_id = ${ORG1} AND employee_code = 'EMP-1014';`, reject(/ERROR 1451/s));
 add('Delete protection: rejected', 'deleting a department that has employees', `DELETE FROM department WHERE organisation_id = ${ORG1} AND code = 'FIN';`, reject(/ERROR 1451/s));
@@ -140,18 +142,18 @@ add('Delete protection: rejected', 'deleting an incident that has updates', `DEL
 add('Delete protection: rejected', 'deleting an organisation that has data', `DELETE FROM organisation WHERE slug = 'aravalli-industries';`, reject(/ERROR 1451/s));
 
 // Values, not just success: these compare what the database returns with what the app expects.
-const VALUE = (sql, expected) => ({ value: { sql, expected } });
+const VALUE = (sql: string, expected: string): Expectation => ({ value: { sql, expected } });
 
-const latest = (riskId) => seed.risk_assessments
+const latest = (riskId: number) => seed.risk_assessments
   .filter((a) => a.risk_id === riskId)
   .sort((a, b) => (a.assessment_date === b.assessment_date ? a.assessment_id - b.assessment_id : a.assessment_date < b.assessment_date ? -1 : 1))
-  .at(-1);
-const riskByCode = (code) => seed.risks.find((r) => r.risk_code === code);
-const band = (s) => (s >= 20 ? 'Critical' : s >= 10 ? 'High' : s >= 5 ? 'Medium' : 'Low');
+  .at(-1)!;
+const riskByCode = (code: string) => seed.risks.find((r) => r.risk_code === code)!;
+const band = (s: number) => (s >= 20 ? 'Critical' : s >= 10 ? 'High' : s >= 5 ? 'Medium' : 'Low');
 const rsk2 = latest(riskByCode('RSK-0002').risk_id).risk_score;
 const rsk1 = latest(riskByCode('RSK-0001').risk_id).risk_score;
 const unrated = seed.risks.filter((r) => !seed.risk_assessments.some((a) => a.risk_id === r.risk_id)).length;
-const openStatuses = ['Open', 'Investigating', 'Contained'];
+const openStatuses: string[] = ['Open', 'Investigating', 'Contained'];
 const unassignedOpen = seed.incidents.filter((i) => openStatuses.includes(i.status) && i.assigned_to === null).length;
 add('Views and values', 'risk_score is generated as likelihood x impact', 'SELECT 1;', VALUE(`SELECT risk_score FROM risk_assessment WHERE organisation_id = ${ORG2} LIMIT 1;`, '20'));
 add('Views and values', 'v_risk_current: every risk of the sample organisation is listed', 'SELECT 1;', VALUE(`SELECT COUNT(*) FROM v_risk_current WHERE organisation_id = ${ORG1};`, String(seed.risks.length)));
@@ -170,21 +172,23 @@ const queriesFile = readFileSync(join(apiRoot, 'database', 'queries.sql'), 'utf8
 add('Reporting queries', 'every query in queries.sql runs without error', queriesFile, OK);
 
 // ---------------------------------------------------------------- run and report
-const results = [];
+interface Result extends Check { pass: boolean; detail: string }
+const results: Result[] = [];
 for (const c of checks) {
   const r = run(c.sql);
-  let pass;
-  let detail;
-  if (c.expect.ok) {
+  let pass: boolean;
+  let detail: string;
+  const expect = c.expect;
+  if ('ok' in expect) {
     pass = r.ok;
     detail = r.ok ? 'accepted' : r.stderr;
-  } else if (c.expect.reject) {
-    pass = !r.ok && c.expect.reject.test(r.stderr);
+  } else if ('reject' in expect) {
+    pass = !r.ok && expect.reject.test(r.stderr);
     detail = r.ok ? 'ACCEPTED, but it should have been rejected' : r.stderr;
   } else {
-    const got = one(c.expect.value.sql);
-    pass = got === c.expect.value.expected;
-    detail = `returned ${JSON.stringify(got)}, expected ${JSON.stringify(c.expect.value.expected)}`;
+    const got = one(expect.value.sql);
+    pass = got === expect.value.expected;
+    detail = `returned ${JSON.stringify(got)}, expected ${JSON.stringify(expect.value.expected)}`;
   }
   results.push({ ...c, pass, detail: detail.replace(/\s+/g, ' ').trim() });
   console.log(`${pass ? 'PASS' : 'FAIL'}  ${c.group}: ${c.name}${pass ? '' : `\n      ${detail}`}`);

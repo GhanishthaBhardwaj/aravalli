@@ -38,7 +38,7 @@ Use the "Acting as" menu in the top bar to see the app as different people and r
 
 ```
 apps/web          The React app (Vite, Tailwind, Recharts, Motion). Demo data layer, pages, components, Playwright tests.
-apps/api          Database: migrations, migration runner, sample seed, verification script. The API itself arrives in Phase 2.
+apps/api          Database: migrations, migration runner, sample seed, verification script (all TypeScript). The API itself arrives in Phase 2.
 packages/shared   Pure domain logic with no React and no I/O: types, scoring, status transitions, validation,
                   permissions, the clock, and the single sample dataset. Both the web app and the future server use it.
 docs/             schema, bug list, manual test checklist, interview guide, database verification

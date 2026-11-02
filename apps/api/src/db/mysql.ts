@@ -2,16 +2,26 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { defaultsFileText } from './config.mjs';
+import { defaultsFileText, type DbConfig } from './config';
+
+export interface MysqlResult {
+  ok: boolean;
+  stdout: string;
+  stderr: string;
+}
+
+interface Options {
+  /** Connect to the configured database (default), or to the server only. */
+  database?: boolean;
+  /** Tab-separated rows without headers. */
+  query?: boolean;
+}
 
 /**
  * Runs SQL through the `mysql` command-line client (no database driver dependency).
- * The password is passed in a temporary option file that is deleted afterwards.
- * @param {ReturnType<typeof import('./config.mjs').readDbConfig>} config
- * @param {string} sql
- * @param {{ database?: boolean, query?: boolean }} [options]  query: tab-separated rows without headers
+ * The password is passed in a temporary option file that is deleted afterwards, never on the command line.
  */
-export function runMysql(config, sql, { database = true, query = false } = {}) {
+export function runMysql(config: DbConfig, sql: string, { database = true, query = false }: Options = {}): MysqlResult {
   const dir = mkdtempSync(join(tmpdir(), 'aravalli-mysql-'));
   try {
     const defaults = join(dir, 'client.cnf');
@@ -21,7 +31,7 @@ export function runMysql(config, sql, { database = true, query = false } = {}) {
     if (database) args.push('--database', config.database);
     const r = spawnSync(config.mysqlBin, args, { input: sql, encoding: 'utf8' });
     if (r.error) {
-      const hint = /** @type {NodeJS.ErrnoException} */ (r.error).code === 'ENOENT'
+      const hint = (r.error as NodeJS.ErrnoException).code === 'ENOENT'
         ? `Could not run "${config.mysqlBin}". Install the MySQL client, or set MYSQL_BIN in .env to its full path.`
         : r.error.message;
       throw new Error(hint);

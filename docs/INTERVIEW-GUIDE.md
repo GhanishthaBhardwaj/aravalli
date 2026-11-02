@@ -22,7 +22,7 @@ pure, tested functions, and I am turning it into a multi-tenant SaaS where every
 | Web app: 12 screens, light and dark themes, works down to 360px | Backend / API (Phase 2) |
 | All business rules, in a shared package, with tests | Real login with email and password (Phase 3) |
 | Tenant-aware MySQL schema as ordered migrations, a migration runner, a verification script | The schema has **not been run on MySQL yet**; the proof run is pending |
-| 136 unit tests and 69 browser tests | Server-side role enforcement (Phase 3) |
+| 140 unit tests and 70 browser tests | Server-side role enforcement (Phase 3) |
 | Sample organisation (fictional) with realistic data | Organisation sign-up, invitations (Phase 3) |
 
 Roles (`Org Admin`, `Risk Officer`, `Department Head`, `Auditor`, `Employee`) are checked **in the browser only** today. That is a
@@ -85,9 +85,9 @@ what login and server-side checks (Phase 3) are for. Data-level isolation is the
 
 ## 7. Database design points
 
-- 3NF, with the one deliberate wrinkle explained in `docs/schema.md` (a risk's department vs its owner's department, kept consistent by a trigger).
+- 3NF. A risk's department and its owner's department are independent facts (a Risk Officer can own risks across departments), so nothing is duplicated. The one derived value, the current score, is not stored.
 - A **generated column** for the score (likelihood × impact), so it cannot be written wrongly.
-- **Views** for the "current" picture; **triggers** for append-only history and the owner-department rule; **CHECK constraints** for value lists and timing rules.
+- **Views** for the "current" picture; **triggers** for append-only history; **CHECK constraints** for value lists and timing rules (including that `resolved_at` exists exactly when an incident is Resolved or Closed).
 - `ON DELETE RESTRICT` everywhere: history is never cascaded away. People are deactivated, not deleted.
 - **Migrations** are ordered files with checksums. The runner refuses to continue if an already-applied file was edited: schema changes are always new migrations.
 - **Tests that read the SQL as text** guarantee, without a server, that every foreign key is composite and tenant-scoped and that the SQL value lists match the TypeScript ones.
@@ -101,14 +101,14 @@ what login and server-side checks (Phase 3) are for. Data-level isolation is the
 - Motion is subtle and is switched off when the user's system asks for reduced motion.
 - Charts are Recharts, restyled to the same tones, and each has a hidden data table for screen readers.
 
-## 9. How it is tested (136 unit tests, 69 browser tests)
+## 9. How it is tested (140 unit tests, 70 browser tests)
 
 | Layer | What it catches | Examples |
 | --- | --- | --- |
-| Shared unit tests (76) | The rules | band boundaries 4/5, 9/10, 16/20; every allowed and refused transition; validators; the clock; sample-data integrity |
-| Web unit tests (28) | The write layer and derived figures | register, assess, report, walk an incident to Closed, closed is final, KPIs |
-| Database tooling (32) | The SQL and runner, without a server | composite foreign keys, append-only triggers present, enum lists match TypeScript, migration planning |
-| Browser tests (69) | The real thing, clicked | forms, dialogs, tabs, filters in the URL, CSV export, print, roles, light/dark, 360px, error state |
+| Shared unit tests (77) | The rules | band boundaries 4/5, 9/10, 16/20; every allowed and refused transition; validators; the clock; sample-data integrity |
+| Web unit tests (29) | The write layer and derived figures | register, assess, report, walk an incident to Closed, closed is final, KPIs |
+| Database tooling (34) | The SQL and runner, without a server | composite foreign keys, append-only triggers present, enum lists match TypeScript, migration planning |
+| Browser tests (70) | The real thing, clicked | forms, dialogs, tabs, filters in the URL, CSV export, print, roles, light/dark, 360px, error state |
 
 A good story: writing the browser tests *before* fixing anything found real bugs (see below), which unit tests had not.
 
@@ -118,14 +118,15 @@ A good story: writing the browser tests *before* fixing anything found real bugs
 2. **A page overflowed at 360px** (831px wide) because a wide table stopped its grid from shrinking.
 3. **Stale saved data** was never invalidated when the sample data changed.
 4. **The clock and the sample company were hardcoded** across components, which would block any real organisation.
+5. **On a phone, tables showed the wrong columns** and record codes wrapped. Found by screenshotting every screen at 360px, not by any automated check.
 
 ## 11. Trade-offs and honest limitations
 
 - Roles are enforced in the browser only. Fine for a demo, not for production. Phase 3 moves it to the server.
 - Data is in browser storage. Phase 2 replaces it with the API and MySQL.
-- The schema is verified as text and by tests, **but not yet on a running MySQL server** (the verification script exists and is ready).
+- The schema is verified as text and by tests, **but not yet on a running MySQL server**. The verification script is ready; the run was blocked because the connection settings file (`.env`) did not exist yet.
 - One large JavaScript bundle (about 840 kB). Easy to split by route; not done.
-- The database scripts are plain JavaScript because typing Node code needs `@types/node`, which has not been approved as a dependency.
+- The database scripts are TypeScript, run with `tsx`, and use the `mysql` command-line client instead of a database driver, so they add no runtime dependency.
 
 ## 12. Questions you may get, with honest answers
 
@@ -143,6 +144,8 @@ an auditor wants. History also makes the current value derivable, so there is no
 
 **"Why are the rules not in the components?"** So they can be tested without a browser, reused on the server, and so no screen can
 accidentally skip one.
+
+**"Why can a Risk Officer own a risk in another department?"** Because that is how risk management actually works: a central risk function owns risks that sit in many departments. I first tied the owner to the department, then removed the rule everywhere (form, validation, database) when it was clear it was wrong. The risk's department says where it belongs; the owner says who is accountable. They are different facts.
 
 **"What was hardest?"** Making the sample organisation stop being special: its name, its date, its default user and its email domain
 were all woven through the interface. Moving them into data, and injecting time, is what makes the app usable for any organisation.
@@ -162,6 +165,7 @@ without it. I also test the rules at their edges (the 4/5, 9/10, 16/20 band boun
 - Found and fixed bugs with a browser test suite (list above).
 - Removed the sample company, its dates and its default user from the interface; time is injected; saved data is versioned.
 - Added organisations to the data model and the database (composite keys), and renamed `Administrator` to `Org Admin`.
-- New design system and every screen redone; light and dark themes.
-- Database as ordered migrations with a runner and a verification script.
-- **Pending:** running the migrations and the verification on a real MySQL server, and recording the result in `docs/db-verification.md`.
+- New design system and every screen redone; light and dark themes; checked at desktop, dark and 360px (screenshots of every screen).
+- Database as ordered migrations with a runner and a verification script, now in TypeScript.
+- Owner-in-department rule removed (form, validation, database); empty states for Departments and People.
+- **Pending:** running the migrations and the verification on a real MySQL server, and recording the result in `docs/db-verification.md`. Blocked only by the missing `.env`; everything else needed is in place.

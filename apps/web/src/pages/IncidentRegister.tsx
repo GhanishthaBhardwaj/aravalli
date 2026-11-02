@@ -39,12 +39,12 @@ export function IncidentRegister() {
 
   const cols: Column<IncidentRow>[] = [
     { key: 'code', header: 'Code', sort: (r) => r.incident.incident_code, render: (r) => <IdLink to={`/incidents/${r.incident.incident_code}`}>{r.incident.incident_code}</IdLink> },
-    { key: 'title', header: 'Incident', sort: (r) => r.incident.title, render: (r) => <span className="block max-w-[40ch] truncate font-medium" title={r.incident.title}>{r.incident.title}</span> },
+    { key: 'title', header: 'Incident', sort: (r) => r.incident.title, render: (r) => <span className="block max-w-[20ch] font-medium md:max-w-[40ch] md:truncate" title={r.incident.title}>{r.incident.title}</span> },
     { key: 'sev', header: 'Severity', sort: (r) => SEVERITY_ORDER[r.incident.severity], render: (r) => <SeverityBadge severity={r.incident.severity} /> },
-    { key: 'status', header: 'Status', sort: (r) => INCIDENT_STATUSES.indexOf(r.incident.status), render: (r) => <StatusBadge status={r.incident.status} /> },
-    { key: 'asg', header: 'Assignee', sort: (r) => r.assignee?.last_name ?? null, render: (r) => <PersonName person={r.assignee} /> },
-    { key: 'risk', header: 'Risk', sort: (r) => r.risk?.risk_code ?? null, render: (r) => (r.risk ? <IdLink to={`/risks/${r.risk.risk_code}`}>{r.risk.risk_code}</IdLink> : <span className="text-subtle">None</span>) },
-    { key: 'age', header: 'Age', align: 'right', sort: (r) => r.ageDays, render: (r) => <span className="num">{r.ageDays}d</span> },
+    { key: 'status', header: 'Status', hideBelow: 'md', sort: (r) => INCIDENT_STATUSES.indexOf(r.incident.status), render: (r) => <StatusBadge status={r.incident.status} /> },
+    { key: 'asg', header: 'Assignee', hideBelow: 'md', sort: (r) => r.assignee?.last_name ?? null, render: (r) => <PersonName person={r.assignee} /> },
+    { key: 'risk', header: 'Risk', hideBelow: 'md', sort: (r) => r.risk?.risk_code ?? null, render: (r) => (r.risk ? <IdLink to={`/risks/${r.risk.risk_code}`}>{r.risk.risk_code}</IdLink> : <span className="text-subtle">None</span>) },
+    { key: 'age', header: 'Age', align: 'right', hideBelow: 'md', sort: (r) => r.ageDays, render: (r) => <span className="num">{r.ageDays}d</span> },
   ];
 
   return (

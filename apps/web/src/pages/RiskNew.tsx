@@ -25,7 +25,8 @@ export function RiskNew() {
   const [errors, setErrors] = useState<Errors>({});
 
   const p = permit(actor, 'risk.register');
-  const owners = ds.employees.filter((e) => e.is_active && e.department_id === dept);
+  const deptName = (id: number) => ds.departments.find((d) => d.department_id === id)?.name ?? '';
+  const owners = ds.employees.filter((e) => e.is_active).sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,14 +61,14 @@ export function RiskNew() {
               <Field label="Department" required error={errors.department_id}>
                 {(f) => (
                   <Select {...f} value={dept ?? ''} placeholder="Select…"
-                    onChange={(e) => { setDept(e.target.value ? Number(e.target.value) : null); setOwner(null); }}
+                    onChange={(e) => setDept(e.target.value ? Number(e.target.value) : null)}
                     options={ds.departments.map((d) => ({ value: String(d.department_id), label: d.name }))} />
                 )}
               </Field>
-              <Field label="Owner" required error={errors.owner_employee_id} hint={dept ? undefined : 'Choose a department first.'}>
+              <Field label="Owner" required error={errors.owner_employee_id} hint="Anyone in the organisation can own a risk.">
                 {(f) => (
-                  <Select {...f} disabled={!dept} value={owner ?? ''} placeholder="Select…" onChange={(e) => setOwner(e.target.value ? Number(e.target.value) : null)}
-                    options={owners.map((o) => ({ value: String(o.employee_id), label: `${o.first_name} ${o.last_name} — ${o.job_title}` }))} />
+                  <Select {...f} value={owner ?? ''} placeholder="Select…" onChange={(e) => setOwner(e.target.value ? Number(e.target.value) : null)}
+                    options={owners.map((o) => ({ value: String(o.employee_id), label: `${o.first_name} ${o.last_name} — ${o.job_title}, ${deptName(o.department_id)}` }))} />
                 )}
               </Field>
             </div>

@@ -54,8 +54,6 @@ describe('seed integrity', () => {
     s.risks.forEach((r) => {
       expect(dept.has(r.department_id)).toBe(true);
       expect(emp.has(r.owner_employee_id)).toBe(true);
-      // owner belongs to the risk's department
-      expect(s.employees.find((e) => e.employee_id === r.owner_employee_id)!.department_id).toBe(r.department_id);
     });
     s.risk_assessments.forEach((a) => { expect(risk.has(a.risk_id)).toBe(true); expect(emp.has(a.assessed_by)).toBe(true); });
     s.incidents.forEach((i) => {
@@ -181,6 +179,11 @@ describe('store actions', () => {
     expect(r.value.status).toBe('Assessed');
     expect(r.data.risk_assessments.at(-1)!.risk_score).toBe(16);
     expect(ds.risks).toHaveLength(seed.risks.length); // input not mutated
+  });
+  it('lets a risk be owned by someone from another department', () => {
+    const r = registerRisk(ds, { ...riskInput, owner_employee_id: 1 }, officer); // Finance owner, Supply Chain risk
+    expect(r.ok && r.value.owner_employee_id).toBe(1);
+    expect(r.ok && r.value.department_id).toBe(4);
   });
   it('registers without assessment as Identified', () => {
     const r = registerRisk(ds, { ...riskInput, likelihood: null, impact: null }, officer);

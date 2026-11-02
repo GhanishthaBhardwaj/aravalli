@@ -7,12 +7,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed-sql": "tsx scripts/generate-seed-sql.mjs",
-    "db:migrate": "node src/db/migrate.mjs up",
-    "db:status": "node src/db/migrate.mjs status",
-    "db:seed": "node src/db/migrate.mjs seed",
-    "db:reset": "node src/db/migrate.mjs reset",
-    "db:verify": "tsx src/db/verify.mjs"
+    "seed-sql": "tsx scripts/generate-seed-sql.ts",
+    "db:migrate": "tsx src/db/migrate.ts up",
+    "db:status": "tsx src/db/migrate.ts status",
+    "db:seed": "tsx src/db/migrate.ts seed",
+    "db:reset": "tsx src/db/migrate.ts reset",
+    "db:verify": "tsx src/db/verify.ts"
   },
   "dependencies": {
     "@aravalli/shared": "*"

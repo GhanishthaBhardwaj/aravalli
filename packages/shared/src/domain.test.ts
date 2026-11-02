@@ -68,8 +68,13 @@ describe('validators', () => {
   it('rejects a future identified date', () => {
     expect(validateRisk({ ...base, identified_date: '2026-10-21' }, seed.employees, TODAY).identified_date).toBeTruthy();
   });
-  it('rejects an owner outside the department', () => {
-    expect(validateRisk({ ...base, owner_employee_id: 1 }, seed.employees, TODAY).owner_employee_id).toBeTruthy();
+  it('accepts an owner from a different department (a Risk Officer can own risks across departments)', () => {
+    expect(validateRisk({ ...base, owner_employee_id: 1 }, seed.employees, TODAY)).toEqual({});
+  });
+  it('rejects an unknown or inactive owner', () => {
+    expect(validateRisk({ ...base, owner_employee_id: 9999 }, seed.employees, TODAY).owner_employee_id).toBeTruthy();
+    const inactive = seed.employees.map((e) => (e.employee_id === 9 ? { ...e, is_active: false } : e));
+    expect(validateRisk(base, inactive, TODAY).owner_employee_id).toBeTruthy();
   });
   it('requires both likelihood and impact when assessing', () => {
     expect(validateRisk({ ...base, likelihood: 3 }, seed.employees, TODAY).impact).toBeTruthy();

@@ -15,15 +15,14 @@ test('register risk validates, previews the score and creates RSK-0041 as Assess
   await page.getByLabel('Title').fill('Single point of failure in the night-shift handover');
   await page.getByLabel('Description').fill('Handover notes live in one shared notebook.');
   await page.getByLabel('Category').selectOption('Operational');
-  // the owner list only offers people from the chosen department
-  const owner = page.getByLabel('Owner');
-  await expect(owner).toBeDisabled();
   await page.getByLabel('Department').selectOption({ label: 'Operations' });
+  // anyone active can own a risk, whatever their department
+  const owner = page.getByLabel('Owner');
   await expect(owner).toBeEnabled();
   const owners = await owner.locator('option').allTextContents();
   expect(owners.join(' ')).toContain('Harpreet Singh');
-  expect(owners.join(' ')).not.toContain('Rajesh Khanna');
-  await owner.selectOption({ label: owners.find((o) => o.includes('Suresh Yadav')) ?? '' });
+  expect(owners.join(' ')).toContain('Rajesh Khanna');
+  await owner.selectOption({ label: owners.find((o) => o.includes('Rajesh Khanna')) ?? '' }); // a Finance person owning an Operations risk
 
   await pick(page, 'Likelihood', 4);
   await pick(page, 'Impact', 5);
@@ -34,6 +33,7 @@ test('register risk validates, previews the score and creates RSK-0041 as Assess
   await expect(page).toHaveURL(/\/risks\/RSK-0041/);
   await expect(toast(page)).toContainText('RSK-0041');
   await expect(page.getByText('Assessed').first()).toBeVisible();
+  await expect(page.getByRole('main').getByText('Rajesh Khanna').first()).toBeVisible();
 });
 
 test('a risk registered without a score is Identified and cannot move to Assessed until it is assessed', async ({ page }) => {

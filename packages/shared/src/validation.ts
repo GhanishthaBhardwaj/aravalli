@@ -29,9 +29,10 @@ export function validateRisk(v: RiskInput, employees: Employee[], today: string)
   if (!(RISK_CATEGORIES as readonly string[]).includes(v.category)) e.category = 'Choose a category.';
   if (!v.department_id) e.department_id = 'Choose a department.';
   if (!v.owner_employee_id) e.owner_employee_id = 'Choose an owner.';
-  else if (v.department_id) {
+  else {
+    // any active employee of the organisation may own a risk, whatever their department
     const o = employees.find((x) => x.employee_id === v.owner_employee_id);
-    if (!o || o.department_id !== v.department_id) e.owner_employee_id = 'Owner must belong to the selected department.';
+    if (!o) e.owner_employee_id = 'Choose an owner from this organisation.';
     else if (!o.is_active) e.owner_employee_id = 'Owner must be an active employee.';
   }
   if (!isDate(v.identified_date)) e.identified_date = 'Enter a valid date.';

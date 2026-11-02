@@ -66,6 +66,18 @@ test('the one accent is orange, used for the primary action', async ({ page }) =
   expect(bg).toBe('rgb(242, 92, 5)');
 });
 
+test('a list with nothing in it explains itself instead of showing an empty table', async ({ page }) => {
+  // an organisation that has just been created and has no departments yet
+  await open(page, '/');
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('aravalli:state') ?? '{}');
+    localStorage.setItem('aravalli:state', JSON.stringify({ ...saved, ds: { ...saved.ds, departments: [] } }));
+  });
+  await open(page, '/departments');
+  await expect(page.getByText('No departments yet')).toBeVisible();
+  await expect(page.getByRole('table')).toHaveCount(0);
+});
+
 test('a crashing screen shows an error state instead of a blank page, and recovers on navigation', async ({ page }) => {
   await page.goto('/__crash');
   await expect(page.getByRole('alert')).toContainText('Something went wrong');
@@ -75,10 +87,18 @@ test('a crashing screen shows an error state instead of a blank page, and recove
 });
 
 test('pages show a loading state before their data appears', async ({ page }) => {
-  await page.goto('/risks', { waitUntil: 'commit' });
-  await expect(page.getByRole('status', { name: 'Loading' })).toBeVisible();
+  // the loading state lasts a fraction of a second, so record that it appeared rather than racing to catch it
+  await page.addInitScript(() => {
+    const w = window as unknown as { __sawLoading: boolean };
+    w.__sawLoading = false;
+    new MutationObserver(() => {
+      if (document.querySelector('[aria-label="Loading"]')) w.__sawLoading = true;
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/risks');
   await ready(page);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Risk Register');
+  expect(await page.evaluate(() => (window as unknown as { __sawLoading: boolean }).__sawLoading)).toBe(true);
 });
 
 test('tabs work with the keyboard and expose the right roles', async ({ page }) => {

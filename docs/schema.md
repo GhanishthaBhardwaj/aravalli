@@ -74,7 +74,7 @@ Employees are deactivated, never deleted.
 - `category`: Operational, Financial, Compliance, Technology, Strategic, Reputational.
 - `status`: Identified, Assessed, Mitigating, Monitoring, Closed (default Identified).
 - There is **no score column**. The current score is whatever the latest assessment says.
-- A trigger requires the owner to work in the risk's department.
+- The owner may work in any department: a Risk Officer can own risks across departments. (There is deliberately no rule tying the owner to the risk's department.)
 
 ### risk_assessment (append-only)
 `risk_id`, `assessed_by`, `assessment_date`, `likelihood` 1–5, `impact` 1–5, `risk_score`, `mitigation_notes` (optional).
@@ -105,7 +105,6 @@ change the status, such as an assignment, a risk link or a progress note), `crea
 | --- | --- |
 | `trg_risk_assessment_no_update` / `_no_delete` | Assessment history is append-only. |
 | `trg_incident_update_no_update` / `_no_delete` | The incident log is append-only. |
-| `trg_risk_owner_in_department_insert` / `_update` | A risk's owner must belong to the risk's department. |
 
 ## Normalisation
 
@@ -115,14 +114,13 @@ change the status, such as an assignment, a risk link or a progress note), `crea
 - **3NF**: non-key columns depend only on their own table's key. The current risk score, a fact derived from the
   assessments, is deliberately **not stored** on `risk`: storing it would duplicate information that can go stale. Names
   (department name, owner name) are looked up through keys, not copied.
-- **A deliberate exception to 3NF-style purity:** `risk.department_id` could in principle be read from the owner's
-  department. It is stored because a risk's home department is a business fact (the owner may change). The rule that
-  the two must match is enforced by a trigger instead.
+- `risk.department_id` (the department the risk belongs to) and the owner's department are independent facts, so
+  neither can be derived from the other and nothing is duplicated. A Risk Officer can own risks in several departments.
 
 ## Lifecycles
 
 Both are enforced in the application (`packages/shared`) and tested; the database enforces the value lists and the
-timing rules, not the order of transitions.
+timing rules (including that `resolved_at` is set exactly when an incident is Resolved or Closed), not the order of transitions.
 
 **Incident:** Open → Investigating → Contained or Resolved; Contained → Resolved; Resolved → Closed, or back to Investigating (reopen).
 Resolving needs a resolution note and sets `resolved_at`; reopening clears it. **Closed is final**: no notes, no reassignment, no link changes.

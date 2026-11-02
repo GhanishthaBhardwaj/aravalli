@@ -1,8 +1,8 @@
 # Database verification
 
-**Status: not run yet.**
+**Status: not run yet. Blocked: no `.env` file was present in the project when the run was attempted.**
 
-The schema, migrations and checks are written, and 32 automated tests check the SQL as text (every foreign key is
+The schema, migrations and checks are written, and 34 automated tests check the SQL as text (every foreign key is
 composite and tenant-scoped, history tables are protected, the value lists match the TypeScript ones, and so on). But
 nothing here has been executed on a real MySQL server, so no claim about how MySQL behaves is made on this page.
 

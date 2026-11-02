@@ -57,8 +57,8 @@ export function AssessmentTable({ assessments, employees }: { assessments: RiskA
     { key: 'l', header: 'Likelihood', align: 'right', render: (a) => <span className="num">{a.likelihood}</span> },
     { key: 'i', header: 'Impact', align: 'right', render: (a) => <span className="num">{a.impact}</span> },
     { key: 's', header: 'Score', render: (a) => <ScoreBadge score={a.risk_score} band={bandFor(a.risk_score)} /> },
-    { key: 'by', header: 'Assessed by', render: (a) => <PersonName person={employees.find((e) => e.employee_id === a.assessed_by)} /> },
-    { key: 'n', header: 'Notes', render: (a) => <span className="block max-w-[34ch] truncate text-muted" title={a.mitigation_notes ?? ''}>{a.mitigation_notes ?? '—'}</span> },
+    { key: 'by', header: 'Assessed by', hideBelow: 'md', render: (a) => <PersonName person={employees.find((e) => e.employee_id === a.assessed_by)} /> },
+    { key: 'n', header: 'Notes', hideBelow: 'md', render: (a) => <span className="block max-w-[34ch] truncate text-muted" title={a.mitigation_notes ?? ''}>{a.mitigation_notes ?? '—'}</span> },
   ];
   return <Table rows={[...assessments].reverse()} columns={cols} rowKey={(a) => a.assessment_id} caption="Assessment history, newest first" />;
 }

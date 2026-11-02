@@ -16,7 +16,7 @@ you to see them with your own eyes. "Reset sample data" (bottom of the left menu
 - [ ] Both themes: text is readable, risk bands are distinct (light grey, grey, dark, orange), and every band shows its name.
 
 ## 3. Risks
-- [ ] **Register a risk**: submit empty and read the errors; pick a department and see the owner list change to that department's people;
+- [ ] **Register a risk**: submit empty and read the errors; choose any person as owner (it does not have to be someone in the risk's department);
   set likelihood 4 and impact 5 and see "20 Critical"; save and land on `RSK-0041`, status Assessed.
 - [ ] Register another with no score: its status is Identified.
 - [ ] On an Identified risk, open **Change status**: "Assessed" is not offered until it has an assessment.
@@ -47,7 +47,7 @@ you to see them with your own eyes. "Reset sample data" (bottom of the left menu
 - [ ] **Departments** and **People**: the counts are links that open the register already filtered.
 
 ## 7. Small screens (resize the window to 360px wide, or use the browser's device mode)
-- [ ] No sideways scrolling on any screen. Tables scroll inside their own box.
+- [ ] No sideways scrolling on any screen. Tables keep their key columns on screen and drop the secondary ones (the record page shows everything).
 - [ ] The menu button opens a slide-out menu (it also has the theme switch) and closes after choosing a page.
 - [ ] Dialogs ("New assessment", "Change status") fit the screen.
 

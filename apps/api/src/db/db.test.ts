@@ -6,21 +6,21 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   bandFor, INCIDENT_STATUSES, RISK_CATEGORIES, RISK_STATUSES, ROLES, seed, SEVERITIES,
 } from '@aravalli/shared';
-import { defaultsFileText, isDisposableDatabase, readDbConfig } from './config.mjs';
-import { listMigrations, planMigrations } from './migrations.mjs';
+import { defaultsFileText, isDisposableDatabase, readDbConfig } from './config';
+import { listMigrations, planMigrations } from './migrations';
 
 const dbDir = fileURLToPath(new URL('../../database/', import.meta.url));
 const migrations = listMigrations(join(dbDir, 'migrations'));
 // comments are removed so that the checks measure real statements, not explanations of them
 const sql = migrations.map((m) => m.sql.replace(/--.*$/gm, '')).join('\n');
 
-const tmpDirs = [];
+const tmpDirs: string[] = [];
 const scratch = () => {
   const d = mkdtempSync(join(tmpdir(), 'aravalli-test-'));
   tmpDirs.push(d);
   return d;
 };
-afterEach(() => { while (tmpDirs.length) rmSync(tmpDirs.pop(), { recursive: true, force: true }); });
+afterEach(() => { while (tmpDirs.length) rmSync(tmpDirs.pop() as string, { recursive: true, force: true }); });
 
 describe('database settings', () => {
   const ok = { DB_HOST: '127.0.0.1', DB_USER: 'u', DB_PASSWORD: 'p', DB_NAME: 'aravalli_dev' };
@@ -51,7 +51,7 @@ describe('database settings', () => {
 });
 
 describe('migration planner', () => {
-  const write = (dir, name, body = 'SELECT 1;') => writeFileSync(join(dir, name), body);
+  const write = (dir: string, name: string, body = 'SELECT 1;') => writeFileSync(join(dir, name), body);
 
   it('lists files in numeric order with a stable checksum that ignores line endings', () => {
     const dir = scratch();
@@ -142,12 +142,19 @@ describe('the schema, read as text (guarantees that hold before any server is in
       expect(sql).toMatch(new RegExp(`BEFORE DELETE ON ${t}`));
     }
   });
+  it('does not tie a risk owner to the risk department (a Risk Officer can own risks across departments)', () => {
+    expect(sql).not.toMatch(/trg_risk_owner/);
+    expect(sql).not.toMatch(/owner must belong/);
+  });
+  it('keeps the resolved_at rule', () => {
+    expect(sql).toMatch(/ck_incident_resolved_matches_status/);
+  });
   it('keeps the risk score a generated column, never stored by hand', () => {
     expect(sql).toMatch(/risk_score\s+TINYINT UNSIGNED GENERATED ALWAYS AS \(likelihood \* impact\) STORED/);
   });
   it('both views expose organisation_id so queries can be tenant-scoped', () => {
     for (const v of ['v_risk_current', 'v_incident_summary']) {
-      const body = new RegExp(`CREATE VIEW ${v} AS\\s+SELECT ([\\s\\S]*?) FROM`).exec(sql)?.[1] ?? '';
+      const body = new RegExp(`CREATE VIEW ${v} AS\\s+SELECT ([\\s\\S]*?)\\sFROM\\s`).exec(sql)?.[1] ?? '';
       expect(body, v).toMatch(/organisation_id/);
     }
   });
@@ -160,10 +167,10 @@ describe('the schema, read as text (guarantees that hold before any server is in
 });
 
 describe('the SQL value lists match the TypeScript ones (they are written twice, so this guards against drift)', () => {
-  const listFor = (constraint) => {
+  const listFor = (constraint: string) => {
     const m = new RegExp(`${constraint}\\s+CHECK\\s*\\([\\s\\S]*?IN\\s*\\(([^)]*)\\)`).exec(sql);
     expect(m, `constraint ${constraint}`).not.toBeNull();
-    return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+    return [...(m as RegExpExecArray)[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
   };
   it.each([
     ['ck_employee_role', ROLES],
@@ -173,7 +180,7 @@ describe('the SQL value lists match the TypeScript ones (they are written twice,
     ['ck_incident_status', INCIDENT_STATUSES],
     ['ck_update_status_from', INCIDENT_STATUSES],
     ['ck_update_status_to', INCIDENT_STATUSES],
-  ])('%s', (name, expected) => {
+  ] as [string, readonly string[]][])('%s', (name, expected) => {
     expect(listFor(name)).toEqual([...expected]);
   });
 });
@@ -181,7 +188,7 @@ describe('the SQL value lists match the TypeScript ones (they are written twice,
 describe('the generated seed', () => {
   const file = join(dbDir, 'seeds', 'demo-organisation.sql');
   const text = readFileSync(file, 'utf8');
-  const rows = (table) => {
+  const rows = (table: string) => {
     const block = new RegExp(`INSERT INTO ${table} \\([^)]*\\) VALUES\\n([\\s\\S]*?);\\n`).exec(text)?.[1] ?? '';
     return block.split('\n').filter((l) => l.startsWith('  (')).length;
   };

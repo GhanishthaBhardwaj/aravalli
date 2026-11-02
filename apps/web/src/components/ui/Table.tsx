@@ -11,7 +11,11 @@ export interface Column<T> {
   render: (r: T) => ReactNode;
   sort?: (r: T) => string | number | null;
   align?: 'right';
+  /** Hide this column below a breakpoint (sm = 640px, md = 768px). The record page still shows everything. */
+  hideBelow?: 'sm' | 'md';
 }
+
+const HIDE: Record<string, string> = { '': '', sm: 'hidden sm:table-cell', md: 'hidden md:table-cell' };
 
 interface Props<T> {
   rows: T[];
@@ -90,7 +94,7 @@ export function Table<T>({
               {columns.map((c) => {
                 const active = c.key === sortKey;
                 return (
-                  <th key={c.key} className={c.align === 'right' ? 'right' : ''} aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
+                  <th key={c.key} className={`${c.align === 'right' ? 'right' : ''} ${HIDE[c.hideBelow ?? '']}`} aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
                     {c.sort ? (
                       <button type="button" onClick={() => toggle(c.key)} className="inline-flex items-center gap-1 hover:text-fg">
                         {c.header}
@@ -108,7 +112,7 @@ export function Table<T>({
             {loading
               ? Array.from({ length: 6 }, (_, i) => (
                   <tr key={i}>
-                    {columns.map((c) => <td key={c.key}><Skeleton className="h-4 w-full max-w-[160px]" /></td>)}
+                    {columns.map((c) => <td key={c.key} className={HIDE[c.hideBelow ?? '']}><Skeleton className="h-4 w-full max-w-[160px]" /></td>)}
                   </tr>
                 ))
               : view.map((r) => {
@@ -122,7 +126,7 @@ export function Table<T>({
                       onKeyDown={href ? (e) => e.key === 'Enter' && nav(href) : undefined}
                     >
                       {columns.map((c) => (
-                        <td key={c.key} className={c.align === 'right' ? 'right' : ''}>{c.render(r)}</td>
+                        <td key={c.key} className={`${c.align === 'right' ? 'right' : ''} ${HIDE[c.hideBelow ?? '']}`}>{c.render(r)}</td>
                       ))}
                     </tr>
                   );
