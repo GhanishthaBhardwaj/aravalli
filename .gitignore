@@ -5,3 +5,10 @@ dist
 playwright-report
 test-results
 .DS_Store
+
+# raw downloaded datasets (Phase 2) and local screenshots never go in the repository
+data/raw/
+screenshots/
+# any other local environment file; the example stays tracked
+.env.*
+!.env.example
