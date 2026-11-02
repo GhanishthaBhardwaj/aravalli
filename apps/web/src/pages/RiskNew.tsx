@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Page } from '../app/Page';
 import { useData, useToast } from '../app/providers';
 import { registerRisk } from '../data/store';
-import { DEMO_TODAY, type Errors, permit, RISK_CATEGORIES } from '@aravalli/shared';
+import { type Errors, permit, RISK_CATEGORIES } from '@aravalli/shared';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select, Textarea } from '../components/ui/fields';
 import { Panel } from '../components/ui/misc';
 import { ScorePicker } from '../components/risk/AssessmentForm';
 
 export function RiskNew() {
-  const { ds, actor, act } = useData();
+  const { ds, actor, act, clock } = useData();
   const toast = useToast();
   const nav = useNavigate();
   const [title, setTitle] = useState('');
@@ -18,7 +18,7 @@ export function RiskNew() {
   const [category, setCategory] = useState('');
   const [dept, setDept] = useState<number | null>(null);
   const [owner, setOwner] = useState<number | null>(null);
-  const [date, setDate] = useState(DEMO_TODAY);
+  const [date, setDate] = useState(clock.today());
   const [l, setL] = useState<number | null>(null);
   const [i, setI] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
@@ -29,11 +29,11 @@ export function RiskNew() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((d, who) =>
-      registerRisk(d, { title, description, category, department_id: dept, owner_employee_id: owner, identified_date: date, likelihood: l, impact: i, mitigation_notes: notes }, who),
+    const r = act((d, who, c) =>
+      registerRisk(d, { title, description, category, department_id: dept, owner_employee_id: owner, identified_date: date, likelihood: l, impact: i, mitigation_notes: notes }, who, c),
     );
     if (!r.ok) return setErrors(r.errors);
-    toast.push(`Risk ${r.value.risk_code} registered (demo)`);
+    toast.push(`Risk ${r.value.risk_code} registered`);
     nav(`/risks/${r.value.risk_code}`);
   };
 
@@ -55,7 +55,7 @@ export function RiskNew() {
                 {(f) => <Select {...f} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Select…" options={RISK_CATEGORIES.map((c) => ({ value: c, label: c }))} />}
               </Field>
               <Field label="Identified date" required error={errors.identified_date}>
-                {(f) => <Input {...f} type="date" max={DEMO_TODAY} value={date} onChange={(e) => setDate(e.target.value)} />}
+                {(f) => <Input {...f} type="date" max={clock.today()} value={date} onChange={(e) => setDate(e.target.value)} />}
               </Field>
               <Field label="Department" required error={errors.department_id}>
                 {(f) => (

@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { bandFor, canIncidentTransition, DEMO_NOW, DEMO_TODAY, INCIDENT_STATUSES, RISK_CATEGORIES, RISK_STATUSES, ROLES, seed, SEVERITIES } from '@aravalli/shared';
 import {
-  addAssessment, addIncidentUpdate, assignIncident, changeRiskStatus, initialData, linkRisk, registerRisk, reportIncident,
-} from './store';
-import { heatGrid, incidentExceptions, kpis, riskRows, topRisks } from './selectors';
+  bandFor, canIncidentTransition, DEMO_CLOCK, INCIDENT_STATUSES, RISK_CATEGORIES, RISK_STATUSES, ROLES, seed, SEVERITIES,
+  type AssessmentInput, type Dataset, type Employee, type IncidentStatus, type RiskInput, type RiskStatus,
+} from '@aravalli/shared';
+import * as store from './store';
+import type { ReportIncidentInput } from './store';
+import * as select from './selectors';
+import { heatGrid, riskRows, topRisks } from './selectors';
+
+// The sample organisation runs on its fixed demo clock; these wrappers pass it in.
+const clock = DEMO_CLOCK;
+const DEMO_NOW = clock.now();
+const DEMO_TODAY = clock.today();
+const initialData = store.initialData;
+const registerRisk = (ds: Dataset, v: RiskInput, a: Employee) => store.registerRisk(ds, v, a, clock);
+const addAssessment = (ds: Dataset, id: number, v: AssessmentInput, a: Employee) => store.addAssessment(ds, id, v, a, clock);
+const changeRiskStatus = (ds: Dataset, id: number, to: RiskStatus, note: string, a: Employee) => store.changeRiskStatus(ds, id, to, note, a, clock);
+const reportIncident = (ds: Dataset, v: ReportIncidentInput, a: Employee) => store.reportIncident(ds, v, a, clock);
+const addIncidentUpdate = (ds: Dataset, id: number, text: string, to: IncidentStatus | null, a: Employee) => store.addIncidentUpdate(ds, id, text, to, a, clock);
+const assignIncident = (ds: Dataset, id: number, emp: number | null, a: Employee) => store.assignIncident(ds, id, emp, a, clock);
+const linkRisk = (ds: Dataset, id: number, risk: number | null, a: Employee) => store.linkRisk(ds, id, risk, a, clock);
+const kpis = (ds: Dataset) => select.kpis(ds, clock);
+const incidentExceptions = (ds: Dataset) => select.incidentExceptions(ds, clock);
 
 const ids = <T>(rows: T[], key: keyof T) => new Set(rows.map((r) => r[key] as unknown as number));
 const NOW = `${DEMO_NOW}:00`;
@@ -245,6 +263,15 @@ describe('store actions', () => {
     const l = linkRisk(ds, 32, 3, officer);
     expect(l.ok && l.data.incidents.find((i) => i.incident_id === 32)!.risk_id).toBe(3);
     expect(assignIncident(ds, 30, 12, worker).ok).toBe(false);
+  });
+  it('treats a closed incident as final: no notes, reassignment or link changes', () => {
+    const closed = seed.incidents.find((i) => i.status === 'Closed')!;
+    expect(addIncidentUpdate(ds, closed.incident_id, 'A late note', null, officer).ok).toBe(false);
+    expect(assignIncident(ds, closed.incident_id, 12, officer).ok).toBe(false);
+    expect(linkRisk(ds, closed.incident_id, 3, officer).ok).toBe(false);
+  });
+  it('lists only open incidents as data-quality exceptions', () => {
+    expect(incidentExceptions(seed).every((r) => r.incident.status !== 'Closed')).toBe(true);
   });
   it('bands match scoring for every current score', () => {
     riskRows(ds).forEach((r) => { if (r.score) expect(r.band).toBe(bandFor(r.score)); });

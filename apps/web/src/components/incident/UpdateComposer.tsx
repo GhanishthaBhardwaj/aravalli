@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { canClose, type Errors, type Incident, INCIDENT_TRANSITIONS, incidentNeedsNote, type IncidentStatus, permit } from '@aravalli/shared';
+import { canClose, type Errors, type Incident, INCIDENT_TRANSITIONS, incidentNeedsNote, type IncidentStatus, isIncidentFinal, permit } from '@aravalli/shared';
 import { addIncidentUpdate } from '../../data/store';
 import { useData, useToast } from '../../app/providers';
 import { Field, Select, Textarea } from '../ui/fields';
@@ -12,16 +12,17 @@ export function UpdateComposer({ incident }: { incident: Incident }) {
   const [to, setTo] = useState<IncidentStatus | ''>('');
   const [errors, setErrors] = useState<Errors>({});
 
-  const p = permit(actor, 'incident.update', incident);
+  const final = isIncidentFinal(incident.status);
+  const p = final ? { allowed: false, reason: 'Closed incidents are final.' } : permit(actor, 'incident.update', incident);
   const next = INCIDENT_TRANSITIONS[incident.status].filter((s) => s !== 'Closed' || canClose(actor).allowed);
   const needsNote = to !== '' && incidentNeedsNote(to);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((ds, who) => addIncidentUpdate(ds, incident.incident_id, text, to || null, who));
+    const r = act((ds, who, c) => addIncidentUpdate(ds, incident.incident_id, text, to || null, who, c));
     if (!r.ok) return setErrors(r.errors);
     setText(''); setTo(''); setErrors({});
-    toast.push('Update saved (demo)');
+    toast.push('Update saved');
   };
 
   return (

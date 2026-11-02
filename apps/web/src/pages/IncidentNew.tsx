@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Page } from '../app/Page';
 import { useData, useToast } from '../app/providers';
 import { reportIncident } from '../data/store';
-import { DEMO_NOW, type Errors, permit, SEVERITIES } from '@aravalli/shared';
+import { type Errors, permit, SEVERITIES } from '@aravalli/shared';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select, Textarea } from '../components/ui/fields';
 import { Panel, SearchableSelect } from '../components/ui/misc';
 import { AssigneeSelect } from '../components/incident/AssigneeSelect';
 
 export function IncidentNew() {
-  const { ds, actor, act } = useData();
+  const { ds, actor, act, clock } = useData();
   const toast = useToast();
   const nav = useNavigate();
   const [title, setTitle] = useState('');
@@ -30,11 +30,11 @@ export function IncidentNew() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((d, who) =>
-      reportIncident(d, { title, description, severity, department_id: dept, occurred_at: occurred, assigned_to: assignee, risk_id: riskId ? Number(riskId) : null }, who),
+    const r = act((d, who, c) =>
+      reportIncident(d, { title, description, severity, department_id: dept, occurred_at: occurred, assigned_to: assignee, risk_id: riskId ? Number(riskId) : null }, who, c),
     );
     if (!r.ok) return setErrors(r.errors);
-    toast.push(`Incident ${r.value.incident_code} reported (demo)`);
+    toast.push(`Incident ${r.value.incident_code} reported`);
     nav(`/incidents/${r.value.incident_code}`);
   };
 
@@ -55,7 +55,7 @@ export function IncidentNew() {
                 {(f) => <Select {...f} value={severity} onChange={(e) => setSeverity(e.target.value)} placeholder="Select…" options={[...SEVERITIES].reverse().map((s) => ({ value: s, label: s }))} />}
               </Field>
               <Field label="Occurred (date and time)" required error={errors.occurred_at}>
-                {(f) => <Input {...f} type="datetime-local" max={DEMO_NOW} value={occurred} onChange={(e) => setOccurred(e.target.value)} />}
+                {(f) => <Input {...f} type="datetime-local" max={clock.now()} value={occurred} onChange={(e) => setOccurred(e.target.value)} />}
               </Field>
               <Field label="Affected department" required error={errors.department_id}>
                 {(f) => <Select {...f} value={dept ?? ''} onChange={(e) => setDept(e.target.value ? Number(e.target.value) : null)} placeholder="Select…" options={ds.departments.map((d) => ({ value: String(d.department_id), label: d.name }))} />}

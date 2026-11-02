@@ -15,6 +15,7 @@ import { SEV_COLOR, SEV_TEXT } from '../components/ui/Chip';
 import { CountUp } from '../components/ui/CountUp';
 import { PersonName } from '../components/ui/Avatar';
 import { Panel } from '../components/ui/misc';
+import { fmtDate } from '../app/format';
 import { StackedBars } from '../components/ui/StackedBars';
 import type { Part } from '../components/ui/StackedBars';
 
@@ -43,9 +44,9 @@ function Stat({ label, value, format, note, icon: Icon, color, tint }: {
 }
 
 export function Overview() {
-  const { ds } = useData();
+  const { ds, clock } = useData();
   const nav = useNavigate();
-  const k = useMemo(() => kpis(ds), [ds]);
+  const k = useMemo(() => kpis(ds, clock), [ds, clock]);
   const cells = useMemo(() => heatGrid(ds, 'current'), [ds]);
   const byStatus = useMemo(() => incidentsByStatus(ds), [ds]);
   const byDept = useMemo(
@@ -63,7 +64,7 @@ export function Overview() {
   }));
 
   return (
-    <Page title="Overview" description="Risk and incident position as of 20 Oct 2026.">
+    <Page title="Overview" description={`Risk and incident position as of ${fmtDate(clock.today())}.`}>
       {(k.criticalHighRisks > 0 || unowned > 0) && (
         <div role="status" className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#fedf89] bg-[#fffaeb] px-4 py-3 text-[14px] text-[#93370d]">
           <TriangleAlert size={18} className="shrink-0" aria-hidden="true" />

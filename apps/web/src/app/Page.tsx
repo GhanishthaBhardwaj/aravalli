@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMeta } from './providers';
+import { PRODUCT } from './brand';
 import { PageSkeleton } from '../components/ui/misc';
 
 interface Props { title: string; description?: string; actions?: ReactNode; children: ReactNode }
@@ -13,8 +14,8 @@ export function Page({ title, description, actions, children }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setMeta({ title, crumbs: [] });
-    document.title = `${title} · Aravalli Risk & Incident`;
+    setMeta({ title });
+    document.title = `${title} · ${PRODUCT.name}`;
   }, [title, setMeta]);
 
   useEffect(() => {

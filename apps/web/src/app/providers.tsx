@@ -1,30 +1,62 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Dataset, Employee } from '@aravalli/shared';
+import { DEMO_CLOCK, systemClock } from '@aravalli/shared';
+import type { Clock, Dataset, Employee, Organisation } from '@aravalli/shared';
 import { initialData } from '../data/store';
 import type { Result } from '../data/store';
 
-const KEY = 'arii-demo-v1';
-const DEFAULT_ACTOR = 2; // Meera Iyer, Risk Officer
+// ------------------------------------------------------------ saved data
+// The demo keeps its data in the browser. A saved copy is only trusted if it was
+// written by this storage version AND from the same sample dataset; otherwise it is
+// thrown away. The fingerprint makes that automatic when the sample data changes.
+const STORAGE_KEY = 'aravalli:state';
+const STORAGE_VERSION = 1;
 
-interface Persisted { ds: Dataset; actorId: number }
+interface Persisted { version: number; fingerprint: string; actorId: number; ds: Dataset }
+
+/** FNV-1a hash of the sample dataset: changes whenever the sample data changes. */
+function fingerprintOf(ds: Dataset): string {
+  const text = JSON.stringify(ds);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+const SAMPLE_FINGERPRINT = fingerprintOf(initialData());
+
+/** The person the demo starts as: the first Risk Officer, else the first employee. */
+const defaultActorId = (ds: Dataset) => (ds.employees.find((e) => e.role === 'Risk Officer') ?? ds.employees[0]).employee_id;
+
+const looksLikeDataset = (ds: unknown): ds is Dataset => {
+  const d = ds as Partial<Dataset> | null;
+  return Boolean(d && d.organisation && ['departments', 'employees', 'risks', 'risk_assessments', 'incidents', 'incident_updates']
+    .every((k) => Array.isArray((d as Record<string, unknown>)[k])));
+};
+
+function fresh(): Persisted {
+  const ds = initialData();
+  return { version: STORAGE_VERSION, fingerprint: SAMPLE_FINGERPRINT, actorId: defaultActorId(ds), ds };
+}
 
 function load(): Persisted {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const p = JSON.parse(raw) as Persisted;
-      if (p?.ds && Array.isArray(p.ds.risks) && Array.isArray(p.ds.incidents) && Array.isArray(p.ds.employees)) return p;
+      if (p.version === STORAGE_VERSION && p.fingerprint === SAMPLE_FINGERPRINT && typeof p.actorId === 'number' && looksLikeDataset(p.ds)) return p;
     }
   } catch {
-    /* storage unavailable or corrupt: fall back to seed */
+    /* storage unavailable or unreadable: start from the sample data */
   }
-  return { ds: initialData(), actorId: DEFAULT_ACTOR };
+  return fresh();
 }
 
 function save(p: Persisted) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(p));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
   } catch {
     /* ignore quota / private mode */
   }
@@ -33,13 +65,18 @@ function save(p: Persisted) {
 // ------------------------------------------------------------------- data
 interface DataCtx {
   ds: Dataset;
+  organisation: Organisation;
   actor: Employee;
+  /** Real time for real organisations, a fixed moment for the sample one. */
+  clock: Clock;
   setActorId: (id: number) => void;
   /** Runs a store function against the latest data; commits the result if ok. */
-  act: <T>(fn: (ds: Dataset, actor: Employee) => Result<T>) => Result<T>;
+  act: <T>(fn: (ds: Dataset, actor: Employee, clock: Clock) => Result<T>) => Result<T>;
   reset: () => void;
 }
 const DataContext = createContext<DataCtx | null>(null);
+
+const clockFor = (org: Organisation): Clock => (org.is_demo ? DEMO_CLOCK : systemClock);
 
 // ------------------------------------------------------------------ toasts
 interface Toast { id: number; message: string }
@@ -47,8 +84,7 @@ interface ToastCtx { push: (message: string) => void }
 const ToastContext = createContext<ToastCtx | null>(null);
 
 // -------------------------------------------------------------- page meta
-export interface Crumb { label: string; to?: string }
-export interface Meta { title: string; crumbs: Crumb[] }
+export interface Meta { title: string }
 interface MetaCtx { meta: Meta; setMeta: (m: Meta) => void }
 const MetaContext = createContext<MetaCtx | null>(null);
 
@@ -56,7 +92,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Persisted>(load);
   const ref = useRef(state);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [meta, setMeta] = useState<Meta>({ title: '', crumbs: [] });
+  const [meta, setMeta] = useState<Meta>({ title: '' });
 
   useEffect(() => {
     ref.current = state;
@@ -64,11 +100,12 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [state]);
 
   const actor = state.ds.employees.find((e) => e.employee_id === state.actorId) ?? state.ds.employees[0];
+  const clock = clockFor(state.ds.organisation);
 
   const act = useCallback<DataCtx['act']>((fn) => {
     const cur = ref.current;
     const who = cur.ds.employees.find((e) => e.employee_id === cur.actorId) ?? cur.ds.employees[0];
-    const r = fn(cur.ds, who);
+    const r = fn(cur.ds, who, clockFor(cur.ds.organisation));
     if (r.ok) {
       ref.current = { ...cur, ds: r.data };
       setState(ref.current);
@@ -79,20 +116,24 @@ export function Providers({ children }: { children: ReactNode }) {
   const data = useMemo<DataCtx>(
     () => ({
       ds: state.ds,
+      organisation: state.ds.organisation,
       actor,
+      clock,
       setActorId: (id) => setState((s) => ({ ...s, actorId: id })),
       act,
       reset: () => {
-        ref.current = { ds: initialData(), actorId: DEFAULT_ACTOR };
+        ref.current = fresh();
         setState(ref.current);
       },
     }),
-    [state, actor, act],
+    [state, actor, clock, act],
   );
 
   const push = useCallback((message: string) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, message }]);
+    // saved changes in the sample organisation are labelled as demo changes
+    const text = ref.current.ds.organisation.is_demo ? `${message} (demo)` : message;
+    setToasts((t) => [...t, { id, message: text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
   const toast = useMemo(() => ({ push }), [push]);
@@ -105,7 +146,7 @@ export function Providers({ children }: { children: ReactNode }) {
           {children}
           <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 no-print" role="status" aria-live="polite">
             {toasts.map((t) => (
-              <div key={t.id} className="panel toast-in px-4 py-2.5 text-sm font-medium" style={{ boxShadow: 'var(--popover-shadow)', borderLeft: '4px solid #2e9e5b' }}>
+              <div key={t.id} data-testid="toast" className="panel toast-in px-4 py-2.5 text-sm font-medium" style={{ boxShadow: 'var(--popover-shadow)', borderLeft: '4px solid #2e9e5b' }}>
                 {t.message}
               </div>
             ))}

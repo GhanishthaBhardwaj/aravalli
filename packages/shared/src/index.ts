@@ -1,4 +1,5 @@
 export * from './types';
+export * from './clock';
 export * from './scoring';
 export * from './transitions';
 export * from './validation';

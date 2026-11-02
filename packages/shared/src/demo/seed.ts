@@ -1,10 +1,19 @@
 // Single source of truth for demo data. Shapes mirror database/schema.sql.
-// Fictional company: Aravalli Industries Ltd. Fixed dates; "today" is DEMO_TODAY.
+// The sample organisation is fictional. Dates are fixed; the matching clock is DEMO_CLOCK (clock.ts).
 import type {
-  Dataset, Department, Employee, Incident, IncidentStatus, IncidentUpdate,
+  Dataset, Organisation, Department, Employee, Incident, IncidentStatus, IncidentUpdate,
   Risk, RiskAssessment, RiskCategory, RiskStatus, Role, Severity,
 } from '../types';
 import { computeScore } from '../scoring';
+
+const ORG_ID = 1;
+const organisation: Organisation = {
+  organisation_id: ORG_ID,
+  name: 'Aravalli Industries Ltd.',
+  slug: 'aravalli-industries',
+  is_demo: true,
+  created_at: '2025-10-15T09:00:00',
+};
 
 const pad = (n: number, w = 4) => String(n).padStart(w, '0');
 
@@ -20,7 +29,7 @@ const DEPTS: [string, string][] = [
   ['HR', 'HR'], ['LGL', 'Legal & Compliance'], ['SLS', 'Sales'], ['FAC', 'Facilities'],
 ];
 const departments: Department[] = DEPTS.map(([code, name], i) => ({
-  department_id: i + 1, code, name, created_at: '2025-10-15T09:00:00',
+  department_id: i + 1, organisation_id: ORG_ID, code, name, created_at: '2025-10-15T09:00:00',
 }));
 const deptId = (code: string) => departments.find((d) => d.code === code)!.department_id;
 
@@ -33,7 +42,7 @@ const EMP: [string, string, string, string, Role][] = [
   ['Pooja', 'Nair', 'FIN', 'Accounts Payable Executive', 'Employee'],
   ['Vikram', 'Malhotra', 'IT', 'Chief Information Officer', 'Department Head'],
   ['Ananya', 'Reddy', 'IT', 'Information Security Analyst', 'Employee'],
-  ['Arjun', 'Menon', 'IT', 'IT Systems Administrator', 'Administrator'],
+  ['Arjun', 'Menon', 'IT', 'IT Systems Administrator', 'Org Admin'],
   ['Kiran', 'Patel', 'IT', 'ERP Functional Analyst', 'Employee'],
   ['Harpreet', 'Singh', 'OPS', 'VP Operations', 'Department Head'],
   ['Deepak', 'Chauhan', 'OPS', 'Plant Manager, Bhiwadi', 'Employee'],
@@ -62,11 +71,12 @@ const EMP: [string, string, string, string, Role][] = [
 ];
 const employees: Employee[] = EMP.map(([first, last, dept, title, role], i) => ({
   employee_id: i + 1,
+  organisation_id: ORG_ID,
   employee_code: `EMP-${1001 + i}`,
   department_id: deptId(dept),
   first_name: first,
   last_name: last,
-  email: `${first}.${last}@aravalli-industries.example`.toLowerCase(),
+  email: `${first}.${last}@${organisation.slug}.example`.toLowerCase(),
   job_title: title,
   role,
   is_active: true,
@@ -313,13 +323,13 @@ RISK_DATA.forEach(([title, description, category, owner, status, identified, ass
   const owner_emp = employees[owner - 1];
   const last = assessments.length ? assessments[assessments.length - 1][0] : identified;
   risks.push({
-    risk_id, risk_code: `RSK-${pad(risk_id)}`, title, description, category,
+    risk_id, organisation_id: ORG_ID, risk_code: `RSK-${pad(risk_id)}`, title, description, category,
     department_id: owner_emp.department_id, owner_employee_id: owner, status,
     identified_date: identified, created_at: `${identified}T09:00:00`, updated_at: `${last}T11:00:00`,
   });
   assessments.forEach(([date, likelihood, impact, by, note]) => {
     risk_assessments.push({
-      assessment_id: risk_assessments.length + 1, risk_id, assessed_by: by,
+      assessment_id: risk_assessments.length + 1, organisation_id: ORG_ID, risk_id, assessed_by: by,
       assessment_date: date, likelihood, impact, risk_score: computeScore(likelihood, impact),
       mitigation_notes: note, created_at: `${date}T11:00:00`,
     });
@@ -467,7 +477,10 @@ const I: IncSpec[] = [
 const incidents: Incident[] = [];
 const incident_updates: IncidentUpdate[] = [];
 const pushUpdate = (incident_id: number, by: number, text: string, from: IncidentStatus | null, to: IncidentStatus | null, at: string) =>
-  incident_updates.push({ update_id: incident_updates.length + 1, incident_id, updated_by: by, update_text: text, status_from: from, status_to: to, created_at: at });
+  incident_updates.push({ update_id: incident_updates.length + 1, organisation_id: ORG_ID, incident_id, updated_by: by, update_text: text, status_from: from, status_to: to, created_at: at });
+
+// The first Risk Officer is recorded as the person who assigned each incident.
+const coordinator = (employees.find((e) => e.role === 'Risk Officer') ?? employees[0]).employee_id;
 
 I.forEach((s, i) => {
   const incident_id = i + 1;
@@ -478,7 +491,7 @@ I.forEach((s, i) => {
   let t = reported_at;
   if (s.asg) {
     t = addHours(t, 1);
-    pushUpdate(incident_id, 2, `Assigned to ${empName(s.asg)}`, null, null, t);
+    pushUpdate(incident_id, coordinator, `Assigned to ${empName(s.asg)}`, null, null, t);
   }
   for (const step of s.steps) {
     const [h, by, st, ...rest] = step.split('|');
@@ -491,10 +504,10 @@ I.forEach((s, i) => {
     }
   }
   incidents.push({
-    incident_id, incident_code: `INC-${pad(incident_id)}`, title: s.t, description: s.d, severity: s.sev,
+    incident_id, organisation_id: ORG_ID, incident_code: `INC-${pad(incident_id)}`, title: s.t, description: s.d, severity: s.sev,
     status, department_id: deptId(s.dept), reported_by: s.rep, assigned_to: s.asg, risk_id: s.risk,
     occurred_at: s.occ, reported_at, resolved_at,
   });
 });
 
-export const seed: Dataset = { departments, employees, risks, risk_assessments, incidents, incident_updates };
+export const seed: Dataset = { organisation, departments, employees, risks, risk_assessments, incidents, incident_updates };

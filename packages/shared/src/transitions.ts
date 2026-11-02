@@ -8,6 +8,9 @@ export const INCIDENT_TRANSITIONS: Record<IncidentStatus, IncidentStatus[]> = {
   Closed: [],
 };
 
+/** A closed incident is final: no updates, reassignment or link changes. */
+export const isIncidentFinal = (status: IncidentStatus): boolean => status === 'Closed';
+
 export function canIncidentTransition(from: IncidentStatus, to: IncidentStatus): boolean {
   return INCIDENT_TRANSITIONS[from].includes(to);
 }

@@ -6,6 +6,7 @@ import {
   RotateCcw, Search, Users, X,
 } from 'lucide-react';
 import { useData } from './providers';
+import { PRODUCT } from './brand';
 import { Avatar } from '../components/ui/Avatar';
 
 type Item = { to: string; label: string; icon: typeof Users; end?: boolean };
@@ -67,14 +68,15 @@ function ResetLink({ mobile }: { mobile?: boolean }) {
 }
 
 function SidebarContent({ mobile, onNavigate }: { mobile?: boolean; onNavigate?: () => void }) {
+  const { organisation } = useData();
   const text = mobile ? '' : 'hidden lg:inline';
   return (
     <nav aria-label="Main" className="flex h-full flex-col bg-[var(--nav)] text-[var(--nav-text)]">
       <div className="flex h-16 items-center gap-3 px-5 text-white">
-        <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-signal text-[15px] font-bold text-white">A</span>
-        <span className={`${text} leading-tight`}>
-          <span className="block text-[15px] font-semibold">Aravalli</span>
-          <span className="block text-[12px] text-[#98a2b3]">Risk &amp; Incident</span>
+        <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-signal text-[15px] font-bold text-white">{PRODUCT.name[0]}</span>
+        <span className={`${text} min-w-0 leading-tight`}>
+          <span className="block text-[15px] font-semibold">{PRODUCT.name}</span>
+          <span className="block truncate text-[12px] text-[#98a2b3]">{organisation.name}</span>
         </span>
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-2">
@@ -210,6 +212,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 }
 
 export function Layout({ children }: { children: ReactNode }) {
+  const { organisation } = useData();
   const [mobile, setMobile] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setMobile(false), [pathname]);
@@ -233,7 +236,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <TopBar onMenu={() => setMobile(true)} />
         <main className="app-main flex-1 px-4 py-6 md:px-8">{children}</main>
         <footer className="app-footer px-4 pb-4 text-xs text-muted md:px-8">
-          <div className="mx-auto max-w-[1280px]">Aravalli Industries Ltd. is a fictional company. Demo data, not connected to a database.</div>
+          <div className="mx-auto max-w-[1280px]">
+            {organisation.is_demo ? `${organisation.name} is a fictional company. Demo data, not connected to a database.` : organisation.name}
+          </div>
         </footer>
       </div>
     </div>

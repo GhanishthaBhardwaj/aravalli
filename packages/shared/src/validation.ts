@@ -3,9 +3,6 @@ import type { Employee } from './types';
 
 export type Errors = Record<string, string | undefined>;
 
-export const DEMO_TODAY = '2026-10-20';
-export const DEMO_NOW = '2026-10-20T17:30';
-
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
 const isDateTime = (s: string) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && !Number.isNaN(Date.parse(s));
 const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= 5;
@@ -22,7 +19,8 @@ export interface RiskInput {
   mitigation_notes: string;
 }
 
-export function validateRisk(v: RiskInput, employees: Employee[], today = DEMO_TODAY): Errors {
+/** `today` is 'YYYY-MM-DD' from the caller's Clock. */
+export function validateRisk(v: RiskInput, employees: Employee[], today: string): Errors {
   const e: Errors = {};
   const t = v.title.trim();
   if (!t) e.title = 'Title is required.';
@@ -54,7 +52,8 @@ export interface AssessmentInput {
   mitigation_notes: string;
 }
 
-export function validateAssessment(v: AssessmentInput, today = DEMO_TODAY): Errors {
+/** `today` is 'YYYY-MM-DD' from the caller's Clock. */
+export function validateAssessment(v: AssessmentInput, today: string): Errors {
   const e: Errors = {};
   if (v.likelihood === null || !inRange(v.likelihood)) e.likelihood = 'Select likelihood (1–5).';
   if (v.impact === null || !inRange(v.impact)) e.impact = 'Select impact (1–5).';
@@ -71,7 +70,8 @@ export interface IncidentInput {
   occurred_at: string;
 }
 
-export function validateIncident(v: IncidentInput, now = DEMO_NOW): Errors {
+/** `now` is 'YYYY-MM-DDTHH:mm' from the caller's Clock. */
+export function validateIncident(v: IncidentInput, now: string): Errors {
   const e: Errors = {};
   const t = v.title.trim();
   if (!t) e.title = 'Title is required.';

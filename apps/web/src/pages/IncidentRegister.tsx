@@ -19,9 +19,9 @@ import { PersonName } from '../components/ui/Avatar';
 const KEYS = ['q', 'severity', 'status', 'department', 'assignee'];
 
 export function IncidentRegister() {
-  const { ds } = useData();
+  const { ds, clock } = useData();
   const f = useFilters(KEYS);
-  const all = useMemo(() => incidentRows(ds), [ds]);
+  const all = useMemo(() => incidentRows(ds, clock), [ds, clock]);
   const q = f.get('q').trim().toLowerCase();
 
   const rows = all.filter((r) => {

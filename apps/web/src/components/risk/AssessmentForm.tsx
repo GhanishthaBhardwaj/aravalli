@@ -3,7 +3,7 @@ import { SegmentedControl } from '../ui/SegmentedControl';
 import { Field, Input, Textarea } from '../ui/fields';
 import { Button } from '../ui/Button';
 import { SeverityChip } from '../ui/Chip';
-import { bandFor, computeScore, DEMO_TODAY, type Errors, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
+import { bandFor, computeScore, type Errors, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
 import { addAssessment } from '../../data/store';
 import { useData, useToast } from '../../app/providers';
 
@@ -39,19 +39,19 @@ export function ScorePicker({ likelihood, impact, onL, onI, errors = {}, clearab
 }
 
 export function AssessmentForm({ riskId, onDone }: { riskId: number; onDone: () => void }) {
-  const { act } = useData();
+  const { act, clock } = useData();
   const toast = useToast();
   const [l, setL] = useState<number | null>(null);
   const [i, setI] = useState<number | null>(null);
-  const [date, setDate] = useState(DEMO_TODAY);
+  const [date, setDate] = useState(clock.today());
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Errors>({});
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((ds, actor) => addAssessment(ds, riskId, { likelihood: l, impact: i, assessment_date: date, mitigation_notes: notes }, actor));
+    const r = act((ds, actor, c) => addAssessment(ds, riskId, { likelihood: l, impact: i, assessment_date: date, mitigation_notes: notes }, actor, c));
     if (!r.ok) return setErrors(r.errors);
-    toast.push('Assessment saved (demo)');
+    toast.push('Assessment saved');
     onDone();
   };
 
@@ -60,7 +60,7 @@ export function AssessmentForm({ riskId, onDone }: { riskId: number; onDone: () 
       {errors._form && <p role="alert" className="text-[var(--sev-critical)]">{errors._form}</p>}
       <ScorePicker likelihood={l} impact={i} onL={setL} onI={setI} errors={errors} />
       <Field label="Assessment date" required error={errors.assessment_date}>
-        {(p) => <Input {...p} type="date" max={DEMO_TODAY} value={date} onChange={(e) => setDate(e.target.value)} />}
+        {(p) => <Input {...p} type="date" max={clock.today()} value={date} onChange={(e) => setDate(e.target.value)} />}
       </Field>
       <Field label="Mitigation notes">
         {(p) => <Textarea {...p} value={notes} onChange={(e) => setNotes(e.target.value)} />}

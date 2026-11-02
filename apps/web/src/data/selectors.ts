@@ -1,11 +1,11 @@
 // Derived data. Every KPI / report here has a matching query in database/queries.sql.
-import { bandFor, type Dataset, DEMO_NOW, DEMO_TODAY, type Department, type Employee, type Incident, INCIDENT_STATUSES, type IncidentStatus, type IncidentUpdate, type Risk, type RiskAssessment, SEVERITIES, type Severity } from '@aravalli/shared';
+import { bandFor, type Clock, type Dataset, type Department, type Employee, type Incident, INCIDENT_STATUSES, type IncidentStatus, type IncidentUpdate, type Risk, type RiskAssessment, SEVERITIES, type Severity } from '@aravalli/shared';
 
 const MS_HOUR = 3_600_000;
 const MS_DAY = 24 * MS_HOUR;
 export const toMs = (s: string) => Date.parse(s.length === 10 ? s : `${s.slice(0, 19)}Z`);
-export const NOW_MS = toMs(`${DEMO_NOW}:00`);
-export const TODAY_MS = toMs(DEMO_TODAY);
+/** The clock's current moment in milliseconds. */
+export const clockMs = (clock: Clock) => toMs(`${clock.now()}:00`);
 
 export const OPEN_INCIDENT_STATUSES: IncidentStatus[] = ['Open', 'Investigating', 'Contained'];
 export const isOpenIncident = (i: Incident) => OPEN_INCIDENT_STATUSES.includes(i.status);
@@ -60,17 +60,17 @@ export interface IncidentRow {
 }
 
 /** Age in whole days: occurrence to resolution, or to "now" while still open. */
-export const incidentAgeDays = (i: Incident) =>
-  Math.floor(((i.resolved_at && !isOpenIncident(i) ? toMs(i.resolved_at) : NOW_MS) - toMs(i.occurred_at)) / MS_DAY);
+export const incidentAgeDays = (i: Incident, clock: Clock) =>
+  Math.floor(((i.resolved_at && !isOpenIncident(i) ? toMs(i.resolved_at) : clockMs(clock)) - toMs(i.occurred_at)) / MS_DAY);
 
-export function incidentRows(ds: Dataset): IncidentRow[] {
+export function incidentRows(ds: Dataset, clock: Clock): IncidentRow[] {
   return ds.incidents.map((incident) => ({
     incident,
     department: ds.departments.find((d) => d.department_id === incident.department_id)!,
     reporter: ds.employees.find((e) => e.employee_id === incident.reported_by)!,
     assignee: ds.employees.find((e) => e.employee_id === incident.assigned_to),
     risk: ds.risks.find((r) => r.risk_id === incident.risk_id),
-    ageDays: incidentAgeDays(incident),
+    ageDays: incidentAgeDays(incident, clock),
   }));
 }
 
@@ -98,10 +98,10 @@ export interface Kpis {
   totalRisks: number;
 }
 
-export function kpis(ds: Dataset): Kpis {
+export function kpis(ds: Dataset, clock: Clock): Kpis {
   const rows = riskRows(ds).filter((r) => isOpenRisk(r.risk));
   const open = ds.incidents.filter(isOpenIncident);
-  const cutoff = NOW_MS - 30 * MS_DAY;
+  const cutoff = clockMs(clock) - 30 * MS_DAY;
   const hours = ds.incidents.map(hoursToResolve).filter((h): h is number => h !== null);
   return {
     openRisks: rows.length,
@@ -193,7 +193,7 @@ export function riskProfileByDepartment(ds: Dataset) {
     const mine = rows.filter((r) => r.department.department_id === d.department_id);
     const count = (b: Severity | null) => mine.filter((r) => r.band === b).length;
     return {
-      department: d.name, Critical: count('Critical'), High: count('High'), Medium: count('Medium'), Low: count('Low'),
+      department_id: d.department_id, department: d.name, Critical: count('Critical'), High: count('High'), Medium: count('Medium'), Low: count('Low'),
       Unrated: count(null), Total: mine.length,
     };
   });
@@ -212,8 +212,8 @@ export const resolutionBySeverity = (ds: Dataset) => resolutionBy(ds, [...SEVERI
 export const resolutionByDepartment = (ds: Dataset) =>
   resolutionBy(ds, ds.departments.map((d) => d.name), (i) => ds.departments.find((d) => d.department_id === i.department_id)!.name);
 
-export const incidentExceptions = (ds: Dataset) =>
-  incidentRows(ds).filter((r) => r.incident.assigned_to === null || r.incident.risk_id === null);
+export const incidentExceptions = (ds: Dataset, clock: Clock) =>
+  incidentRows(ds, clock).filter((r) => r.incident.status !== 'Closed' && (r.incident.assigned_to === null || r.incident.risk_id === null));
 
 export const formatHours = (h: number | null) => {
   if (h === null) return '—';

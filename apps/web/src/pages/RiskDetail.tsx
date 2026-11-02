@@ -39,9 +39,9 @@ export function RiskDetail() {
   const saveStatus = (e: React.FormEvent) => {
     e.preventDefault();
     if (!to) return setErrors({ status: 'Choose a status.' });
-    const r = act((d, who) => changeRiskStatus(d, risk.risk_id, to, note, who));
+    const r = act((d, who, c) => changeRiskStatus(d, risk.risk_id, to, note, who, c));
     if (!r.ok) return setErrors(r.errors);
-    toast.push(`Status changed to ${to} (demo)`);
+    toast.push(`Status changed to ${to} `);
     setStatusOpen(false); setTo(''); setNote(''); setErrors({});
   };
 
@@ -63,7 +63,7 @@ export function RiskDetail() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Panel title="Facts">
             <dl className="space-y-3">
               <Fact label="Owner">{fullName(row.owner)} <span className="text-muted">— {row.owner.job_title}</span></Fact>
@@ -92,7 +92,7 @@ export function RiskDetail() {
             )}
           </Panel>
         </div>
-        <div>
+        <div className="min-w-0">
           {history.length ? (
             <AssessmentHistory assessments={history} employees={ds.employees} />
           ) : (

@@ -46,11 +46,11 @@ function ReportCard({ id, title, description, onCsv, children }: {
 }
 
 export function Reports() {
-  const { ds } = useData();
+  const { ds, clock } = useData();
   const profile = riskProfileByDepartment(ds);
   const bySev = resolutionBySeverity(ds);
   const byDept = resolutionByDepartment(ds);
-  const exceptions = incidentExceptions(ds);
+  const exceptions = incidentExceptions(ds, clock);
 
   const resCols = (label: string) => [
     { key: 'g', header: label, render: (r: ResolutionRow) => r.group },

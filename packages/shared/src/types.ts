@@ -1,5 +1,5 @@
-// Types mirror the SQL tables in database/schema.sql (snake_case on purpose).
-export const ROLES = ['Administrator', 'Risk Officer', 'Department Head', 'Auditor', 'Employee'] as const;
+// Types mirror the SQL tables (snake_case on purpose). Every tenant-owned row carries organisation_id.
+export const ROLES = ['Org Admin', 'Risk Officer', 'Department Head', 'Auditor', 'Employee'] as const;
 export type Role = (typeof ROLES)[number];
 
 export const RISK_CATEGORIES = ['Operational', 'Financial', 'Compliance', 'Technology', 'Strategic', 'Reputational'] as const;
@@ -14,8 +14,19 @@ export type Severity = (typeof SEVERITIES)[number];
 export const INCIDENT_STATUSES = ['Open', 'Investigating', 'Contained', 'Resolved', 'Closed'] as const;
 export type IncidentStatus = (typeof INCIDENT_STATUSES)[number];
 
+/** A customer company. Everything else belongs to exactly one organisation. */
+export interface Organisation {
+  organisation_id: number;
+  name: string;
+  slug: string;
+  /** True for the sample organisation: sample data and a fixed clock. */
+  is_demo: boolean;
+  created_at: string;
+}
+
 export interface Department {
   department_id: number;
+  organisation_id: number;
   code: string;
   name: string;
   created_at: string;
@@ -23,6 +34,7 @@ export interface Department {
 
 export interface Employee {
   employee_id: number;
+  organisation_id: number;
   employee_code: string;
   department_id: number;
   first_name: string;
@@ -36,6 +48,7 @@ export interface Employee {
 
 export interface Risk {
   risk_id: number;
+  organisation_id: number;
   risk_code: string;
   title: string;
   description: string;
@@ -50,6 +63,7 @@ export interface Risk {
 
 export interface RiskAssessment {
   assessment_id: number;
+  organisation_id: number;
   risk_id: number;
   assessed_by: number;
   assessment_date: string; // YYYY-MM-DD
@@ -62,6 +76,7 @@ export interface RiskAssessment {
 
 export interface Incident {
   incident_id: number;
+  organisation_id: number;
   incident_code: string;
   title: string;
   description: string;
@@ -78,6 +93,7 @@ export interface Incident {
 
 export interface IncidentUpdate {
   update_id: number;
+  organisation_id: number;
   incident_id: number;
   updated_by: number;
   update_text: string;
@@ -86,7 +102,9 @@ export interface IncidentUpdate {
   created_at: string;
 }
 
+/** One organisation's data, as the web demo holds it in memory. */
 export interface Dataset {
+  organisation: Organisation;
   departments: Department[];
   employees: Employee[];
   risks: Risk[];

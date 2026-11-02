@@ -5,7 +5,7 @@ import { useData, useToast } from '../app/providers';
 import { NotFound } from './NotFound';
 import { fullName, incidentAgeDays, updatesFor } from '../data/selectors';
 import { assignIncident, linkRisk } from '../data/store';
-import { type Errors, permit } from '@aravalli/shared';
+import { type Errors, isIncidentFinal, permit } from '@aravalli/shared';
 import { Button } from '../components/ui/Button';
 import { SeverityChip, StatusChip } from '../components/ui/Chip';
 import { Field } from '../components/ui/fields';
@@ -21,7 +21,7 @@ export function IncidentDetail() {
 }
 
 function Inner({ code }: { code: string }) {
-  const { ds, actor, act } = useData();
+  const { ds, actor, act, clock } = useData();
   const toast = useToast();
   const inc = ds.incidents.find((i) => i.incident_code === code);
   const [assignee, setAssignee] = useState<number | null>(inc?.assigned_to ?? null);
@@ -36,19 +36,22 @@ function Inner({ code }: { code: string }) {
   const risk = ds.risks.find((r) => r.risk_id === inc.risk_id);
   const pAssign = permit(actor, 'incident.assign', inc);
   const pLink = permit(actor, 'incident.link', inc);
-  const closed = inc.status === 'Closed';
+  const closed = isIncidentFinal(inc.status);
+  const FINAL = 'Closed incidents are final.';
+  const assignReason = pAssign.allowed ? (closed ? FINAL : undefined) : pAssign.reason;
+  const linkReason = pLink.allowed ? (closed ? FINAL : undefined) : pLink.reason;
 
   const saveAssign = () => {
-    const r = act((d, who) => assignIncident(d, inc.incident_id, assignee, who));
+    const r = act((d, who, c) => assignIncident(d, inc.incident_id, assignee, who, c));
     if (!r.ok) return setErrors({ assigned_to: r.errors.assigned_to ?? r.errors._form });
     setErrors({});
-    toast.push('Assignment saved (demo)');
+    toast.push('Assignment saved');
   };
   const saveLink = (next: number | null) => {
-    const r = act((d, who) => linkRisk(d, inc.incident_id, next, who));
+    const r = act((d, who, c) => linkRisk(d, inc.incident_id, next, who, c));
     if (!r.ok) return setErrors({ risk_id: r.errors.risk_id ?? r.errors._form });
     setErrors({});
-    toast.push(next ? 'Risk linked (demo)' : 'Risk unlinked (demo)');
+    toast.push(next ? 'Risk linked' : 'Risk unlinked');
   };
 
   return (
@@ -57,7 +60,7 @@ function Inner({ code }: { code: string }) {
         <span className="mono text-sm font-medium">{inc.incident_code}</span>
         <SeverityChip severity={inc.severity} />
         <StatusChip status={inc.status} />
-        <span className="text-[14px] text-muted">{['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} {incidentAgeDays(inc)} {incidentAgeDays(inc) === 1 ? 'day' : 'days'}</span>
+        <span className="text-[14px] text-muted">{['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} {incidentAgeDays(inc, clock)} {incidentAgeDays(inc, clock) === 1 ? 'day' : 'days'}</span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
@@ -79,23 +82,23 @@ function Inner({ code }: { code: string }) {
             <Field label="Assignee" error={errors.assigned_to}>
               {(f) => <AssigneeSelect id={f.id} employees={ds.employees} value={assignee} onChange={setAssignee} invalid={f['aria-invalid']} />}
             </Field>
-            <Button onClick={saveAssign} disabledReason={pAssign.allowed ? (closed ? 'Closed incidents cannot be reassigned.' : undefined) : pAssign.reason}>
+            <Button onClick={saveAssign} disabledReason={assignReason}>
               {assigned ? 'Reassign' : 'Assign'}
             </Button>
           </Panel>
 
           <Panel title="Linked risk">
             <Field label="Risk" error={errors.risk_id}>
-              {(f) => <SearchableSelect id={f.id} options={riskOpts} value={riskId} onChange={setRiskId} placeholder="No linked risk" disabled={!pLink.allowed} invalid={f['aria-invalid']} />}
+              {(f) => <SearchableSelect id={f.id} options={riskOpts} value={riskId} onChange={setRiskId} placeholder="No linked risk" disabled={!pLink.allowed || closed} invalid={f['aria-invalid']} />}
             </Field>
             <div className="flex gap-2">
-              <Button onClick={() => saveLink(riskId ? Number(riskId) : null)} disabledReason={pLink.allowed ? undefined : pLink.reason}>
+              <Button onClick={() => saveLink(riskId ? Number(riskId) : null)} disabledReason={linkReason}>
                 {risk ? 'Change link' : 'Link risk'}
               </Button>
               {risk && (
                 <Button
                   onClick={() => { setRiskId(null); saveLink(null); }}
-                  disabledReason={pLink.allowed ? undefined : pLink.reason}
+                  disabledReason={linkReason}
                 >
                   Unlink
                 </Button>
