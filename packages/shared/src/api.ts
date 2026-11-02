@@ -15,7 +15,7 @@ export interface DepartmentWithStats extends Department {
   people: number;
 }
 
-export type EmployeeListItem = Employee & { department_name: string };
+export type EmployeeListItem = Employee & { department_name: string; open_risks: number; open_incidents: number };
 
 export type RiskBand = Severity | 'Unrated';
 
@@ -80,6 +80,7 @@ export interface Kpis {
   resolvedLast30: number;
   meanHoursToResolve: number | null;
   criticalOpenIncidents: number;
+  unassignedOpenIncidents: number;
   totalRisks: number;
 }
 
@@ -103,7 +104,7 @@ export interface Overview {
 export interface HeatCell {
   likelihood: number;
   impact: number;
-  risks: Pick<RiskListItem, 'risk_id' | 'risk_code' | 'title' | 'risk_score' | 'severity_band' | 'department_name' | 'owner_name' | 'status'>[];
+  risks: (Pick<RiskListItem, 'risk_id' | 'risk_code' | 'title' | 'risk_score' | 'severity_band' | 'department_name' | 'owner_name' | 'status'> & { first_score: number | null })[];
 }
 
 export interface RiskProfileRow {

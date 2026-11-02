@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w @aravalli/web",
+    "dev": "node scripts/dev.mjs",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -22,7 +22,10 @@
     "db:seed": "npm run db:seed -w @aravalli/api",
     "db:reset": "npm run db:reset -w @aravalli/api",
     "db:verify": "npm run db:verify -w @aravalli/api",
-    "db:seed-sql": "npm run seed-sql -w @aravalli/api"
+    "db:seed-sql": "npm run seed-sql -w @aravalli/api",
+    "dev:web": "npm run dev -w @aravalli/web",
+    "dev:api": "npm run dev -w @aravalli/api",
+    "data:download": "npm run data:download -w @aravalli/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

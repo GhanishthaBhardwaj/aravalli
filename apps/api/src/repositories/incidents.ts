@@ -11,6 +11,8 @@ export interface IncidentFilters {
   department_id?: number;
   assignee_id?: number;
   risk_id?: number;
+  /** true: no assignee. */
+  unassigned?: boolean;
   /** true: Open / Investigating / Contained only. false: Resolved / Closed only. */
   open?: boolean;
   /** true: not Closed, and either unassigned or not linked to a risk. */
@@ -55,6 +57,7 @@ function where(organisationId: number, f: IncidentFilters) {
   if (f.severities?.length) { w.push(`i.severity IN (${f.severities.map(() => '?').join(',')})`); p.push(...f.severities); }
   if (f.department_id) { w.push('i.department_id = ?'); p.push(f.department_id); }
   if (f.assignee_id) { w.push('i.assigned_to = ?'); p.push(f.assignee_id); }
+  if (f.unassigned) w.push('i.assigned_to IS NULL');
   if (f.risk_id) { w.push('i.risk_id = ?'); p.push(f.risk_id); }
   if (f.open === true) w.push("i.status IN ('Open', 'Investigating', 'Contained')");
   if (f.open === false) w.push("i.status IN ('Resolved', 'Closed')");

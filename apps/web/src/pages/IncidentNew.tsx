@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { type Errors, permit, SEVERITIES } from '@aravalli/shared';
 import { Page } from '../app/Page';
-import { useData, useToast } from '../app/providers';
-import { reportIncident } from '../data/store';
-import { AssigneeSelect } from '../components/incident/AssigneeSelect';
+import { useSession, useToast } from '../app/providers';
+import { api, fieldErrors } from '../api/client';
+import { useApi } from '../api/useApi';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select, Textarea } from '../components/ui/fields';
 import { Section } from '../components/ui/layout';
-import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { PersonPicker } from '../components/ui/PersonPicker';
+import { RiskPicker } from '../components/ui/RiskPicker';
 
 export function IncidentNew() {
-  const { ds, actor, act, clock } = useData();
+  const { actor, clock } = useSession();
   const toast = useToast();
   const nav = useNavigate();
   const [title, setTitle] = useState('');
@@ -22,18 +23,25 @@ export function IncidentNew() {
   const [assignee, setAssignee] = useState<number | null>(null);
   const [riskId, setRiskId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
+  const departments = useApi((signal) => api.departments(signal), []);
   const p = permit(actor, 'incident.report');
-  const riskOpts = useMemo(() => ds.risks.map((r) => ({ value: String(r.risk_id), label: r.title, hint: r.risk_code })), [ds.risks]);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((d, who, c) =>
-      reportIncident(d, { title, description, severity, department_id: dept, occurred_at: occurred, assigned_to: assignee, risk_id: riskId ? Number(riskId) : null }, who, c),
-    );
-    if (!r.ok) return setErrors(r.errors);
-    toast.push(`Incident ${r.value.incident_code} reported`);
-    nav(`/incidents/${r.value.incident_code}`);
+    setSaving(true);
+    try {
+      const inc = await api.reportIncident({
+        title, description, severity, department_id: dept, occurred_at: occurred, assigned_to: assignee, risk_id: riskId ? Number(riskId) : null,
+      });
+      toast.push(`Incident ${inc.incident_code} reported`);
+      nav(`/incidents/${inc.incident_code}`);
+    } catch (err) {
+      setErrors(fieldErrors(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -41,6 +49,7 @@ export function IncidentNew() {
       {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-fg pl-4 text-[15px]">{p.reason}</p>}
       <form onSubmit={submit} noValidate className="max-w-2xl">
         <Section title="Incident details">
+          {errors._form && <p role="alert" className="mb-3 text-[14px] font-medium">{errors._form}</p>}
           <fieldset disabled={!p.allowed} className="space-y-1">
             <Field label="Title" required error={errors.title}>
               {(f) => <Input {...f} value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} />}
@@ -56,19 +65,19 @@ export function IncidentNew() {
                 {(f) => <Input {...f} type="datetime-local" max={clock.now()} value={occurred} onChange={(e) => setOccurred(e.target.value)} />}
               </Field>
               <Field label="Affected department" required error={errors.department_id}>
-                {(f) => <Select {...f} value={dept ?? ''} onChange={(e) => setDept(e.target.value ? Number(e.target.value) : null)} placeholder="Select…" options={ds.departments.map((d) => ({ value: String(d.department_id), label: d.name }))} />}
+                {(f) => <Select {...f} value={dept ?? ''} onChange={(e) => setDept(e.target.value ? Number(e.target.value) : null)} placeholder="Select…" options={(departments.data ?? []).map((d) => ({ value: String(d.department_id), label: d.name }))} />}
               </Field>
               <Field label="Assignee (optional)" error={errors.assigned_to}>
-                {(f) => <AssigneeSelect id={f.id} employees={ds.employees} value={assignee} onChange={setAssignee} invalid={f['aria-invalid']} />}
+                {(f) => <PersonPicker id={f.id} value={assignee} onChange={setAssignee} invalid={f['aria-invalid']} />}
               </Field>
             </div>
             <Field label="Linked risk (optional)" error={errors.risk_id} hint="Search by risk code or title.">
-              {(f) => <SearchableSelect id={f.id} options={riskOpts} value={riskId} onChange={setRiskId} placeholder="No linked risk" invalid={f['aria-invalid']} />}
+              {(f) => <RiskPicker id={f.id} value={riskId} onChange={setRiskId} invalid={f['aria-invalid']} />}
             </Field>
           </fieldset>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => nav('/incidents')}>Cancel</Button>
-            <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>Report incident</Button>
+            <Button type="submit" variant="primary" disabled={saving} disabledReason={p.allowed ? undefined : p.reason}>{saving ? 'Reporting…' : 'Report incident'}</Button>
           </div>
         </Section>
       </form>

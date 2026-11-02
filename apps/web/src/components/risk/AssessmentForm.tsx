@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { bandFor, computeScore, type Errors, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
+import { bandFor, computeScore, type Errors, IMPACT_LABELS, LIKELIHOOD_LABELS, type RiskDetail } from '@aravalli/shared';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { Field, Input, Textarea } from '../ui/fields';
 import { Button } from '../ui/Button';
 import { ScoreBadge } from './ScoreBadge';
-import { addAssessment } from '../../data/store';
-import { useData, useToast } from '../../app/providers';
+import { api, fieldErrors } from '../../api/client';
+import { useSession, useToast } from '../../app/providers';
 
 interface PickerProps {
   likelihood: number | null;
@@ -31,21 +31,28 @@ export function ScorePicker({ likelihood, impact, onL, onI, errors = {}, clearab
   );
 }
 
-export function AssessmentForm({ riskId, onDone }: { riskId: number; onDone: () => void }) {
-  const { act, clock } = useData();
+export function AssessmentForm({ riskId, onDone, onSaved }: { riskId: number; onDone: () => void; onSaved: (updated: RiskDetail) => void }) {
+  const { clock } = useSession();
   const toast = useToast();
   const [l, setL] = useState<number | null>(null);
   const [i, setI] = useState<number | null>(null);
   const [date, setDate] = useState(clock.today());
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((ds, actor, c) => addAssessment(ds, riskId, { likelihood: l, impact: i, assessment_date: date, mitigation_notes: notes }, actor, c));
-    if (!r.ok) return setErrors(r.errors);
-    toast.push('Assessment saved');
-    onDone();
+    setSaving(true);
+    try {
+      onSaved(await api.addAssessment(riskId, { likelihood: l, impact: i, assessment_date: date, mitigation_notes: notes }));
+      toast.push('Assessment saved');
+      onDone();
+    } catch (err) {
+      setErrors(fieldErrors(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -60,7 +67,7 @@ export function AssessmentForm({ riskId, onDone }: { riskId: number; onDone: () 
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="ghost" onClick={onDone}>Cancel</Button>
-        <Button type="submit" variant="primary">Save assessment</Button>
+        <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Saving…' : 'Save assessment'}</Button>
       </div>
     </form>
   );

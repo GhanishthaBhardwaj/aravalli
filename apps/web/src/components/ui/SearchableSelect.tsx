@@ -10,10 +10,14 @@ interface Props {
   placeholder?: string;
   invalid?: boolean;
   disabled?: boolean;
+  /** Called as the person types, so the parent can load matching options from the server. */
+  onSearch?: (q: string) => void;
+  /** false when the options are already filtered by the server. */
+  filter?: boolean;
 }
 
 /** Type to filter, arrow keys to move, Enter to choose. */
-export function SearchableSelect({ id, options, value, onChange, placeholder = 'Search…', invalid, disabled }: Props) {
+export function SearchableSelect({ id, options, value, onChange, placeholder = 'Search…', invalid, disabled, onSearch, filter = true }: Props) {
   const lid = useId();
   const sel = options.find((o) => o.value === value);
   const [q, setQ] = useState(sel?.label ?? '');
@@ -22,8 +26,8 @@ export function SearchableSelect({ id, options, value, onChange, placeholder = '
   useEffect(() => setQ(sel?.label ?? ''), [sel?.label]);
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return (!t || q === sel?.label ? options : options.filter((o) => `${o.label} ${o.hint ?? ''}`.toLowerCase().includes(t))).slice(0, 50);
-  }, [q, options, sel?.label]);
+    return (!filter || !t || q === sel?.label ? options : options.filter((o) => `${o.label} ${o.hint ?? ''}`.toLowerCase().includes(t))).slice(0, 50);
+  }, [q, options, sel?.label, filter]);
 
   const pick = (o: Opt | null) => {
     onChange(o?.value ?? null);
@@ -48,6 +52,7 @@ export function SearchableSelect({ id, options, value, onChange, placeholder = '
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onChange={(e) => {
           setQ(e.target.value);
+          onSearch?.(e.target.value);
           setOpen(true);
           setHi(0);
           if (!e.target.value) onChange(null);

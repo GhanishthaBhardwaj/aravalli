@@ -3,12 +3,12 @@ import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useData } from './providers';
+import { useSession } from './providers';
 import { Sidebar } from '../components/shell/Sidebar';
 import { Topbar } from '../components/shell/Topbar';
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { organisation } = useData();
+  const { organisation } = useSession();
   const [drawer, setDrawer] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setDrawer(false), [pathname]);
@@ -52,7 +52,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <Topbar onMenu={() => setDrawer(true)} />
         <main className="app-main mx-auto w-full max-w-[1180px] flex-1 px-4 py-10 md:px-10 md:py-14">{children}</main>
         <footer className="app-footer mx-auto w-full max-w-[1180px] px-4 pb-8 text-[13px] text-subtle md:px-10">
-          {organisation.is_demo ? `${organisation.name} is a fictional company. Demo data, not connected to a database.` : organisation.name}
+          {organisation.is_demo ? `${organisation.name} is a demonstration organisation, not a customer. Data sources are credited in the README.` : organisation.name}
         </footer>
       </div>
     </div>

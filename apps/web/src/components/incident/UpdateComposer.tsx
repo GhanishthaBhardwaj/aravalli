@@ -1,30 +1,40 @@
 import { useState } from 'react';
 import {
-  canClose, type Errors, type Incident, INCIDENT_TRANSITIONS, incidentNeedsNote, type IncidentStatus, isIncidentFinal, permit,
+  canClose, type Errors, type IncidentDetail, INCIDENT_TRANSITIONS, incidentNeedsNote, type IncidentStatus, isIncidentFinal, permit,
 } from '@aravalli/shared';
-import { addIncidentUpdate } from '../../data/store';
-import { useData, useToast } from '../../app/providers';
+import { api, fieldErrors } from '../../api/client';
+import { useSession, useToast } from '../../app/providers';
 import { Field, Select, Textarea } from '../ui/fields';
 import { Button } from '../ui/Button';
 
-export function UpdateComposer({ incident }: { incident: Incident }) {
-  const { act, actor } = useData();
+export function UpdateComposer({ incident, onSaved }: { incident: IncidentDetail; onSaved: (updated: IncidentDetail) => void }) {
+  const { actor } = useSession();
   const toast = useToast();
   const [text, setText] = useState('');
   const [to, setTo] = useState<IncidentStatus | ''>('');
   const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
   const final = isIncidentFinal(incident.status);
-  const p = final ? { allowed: false, reason: 'Closed incidents are final.' } : permit(actor, 'incident.update', incident);
+  // The server enforces all of this again; here it only explains why a control is disabled.
+  const p = final
+    ? { allowed: false, reason: 'Closed incidents are final.' }
+    : permit(actor, 'incident.update', { reported_by: incident.reported_by, assigned_to: incident.assigned_to } as never);
   const next = INCIDENT_TRANSITIONS[incident.status].filter((s) => s !== 'Closed' || canClose(actor).allowed);
   const needsNote = to !== '' && incidentNeedsNote(to);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((ds, who, c) => addIncidentUpdate(ds, incident.incident_id, text, to || null, who, c));
-    if (!r.ok) return setErrors(r.errors);
-    setText(''); setTo(''); setErrors({});
-    toast.push('Update saved');
+    setSaving(true);
+    try {
+      onSaved(await api.addIncidentUpdate(incident.incident_id, text, to || null));
+      setText(''); setTo(''); setErrors({});
+      toast.push('Update saved');
+    } catch (err) {
+      setErrors(fieldErrors(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -50,7 +60,7 @@ export function UpdateComposer({ incident }: { incident: Incident }) {
         )}
       </Field>
       <div className="flex justify-end pt-2">
-        <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>Post update</Button>
+        <Button type="submit" variant="primary" disabled={saving} disabledReason={p.allowed ? undefined : p.reason}>{saving ? 'Posting…' : 'Post update'}</Button>
       </div>
     </form>
   );

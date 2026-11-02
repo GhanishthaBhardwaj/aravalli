@@ -40,11 +40,15 @@ export async function getDepartment(db: Executor, organisationId: number, depart
 }
 
 // ------------------------------------------------------------------- employees
-interface EmployeeRow extends Omit<Employee, 'is_active' | 'created_at'> { is_active: number; created_at: string; department_name: string }
+interface EmployeeRow extends Omit<Employee, 'is_active' | 'created_at'> {
+  is_active: number; created_at: string; department_name: string; open_risks: number; open_incidents: number;
+}
 const toEmployee = (r: EmployeeRow): EmployeeListItem => ({ ...r, is_active: Boolean(r.is_active), created_at: iso(r.created_at) });
 
 const EMPLOYEE_SELECT = `SELECT e.employee_id, e.organisation_id, e.employee_code, e.department_id, d.name AS department_name,
-       e.first_name, e.last_name, e.email, e.job_title, e.role, e.is_active, e.created_at
+       e.first_name, e.last_name, e.email, e.job_title, e.role, e.is_active, e.created_at,
+       (SELECT COUNT(*) FROM risk r WHERE r.organisation_id = e.organisation_id AND r.owner_employee_id = e.employee_id AND r.status <> 'Closed') AS open_risks,
+       (SELECT COUNT(*) FROM incident i WHERE i.organisation_id = e.organisation_id AND i.assigned_to = e.employee_id AND i.status IN ('Open', 'Investigating', 'Contained')) AS open_incidents
 FROM employee e
 JOIN department d ON d.department_id = e.department_id AND d.organisation_id = e.organisation_id`;
 

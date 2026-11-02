@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { type Errors, permit, RISK_CATEGORIES } from '@aravalli/shared';
 import { Page } from '../app/Page';
-import { useData, useToast } from '../app/providers';
-import { registerRisk } from '../data/store';
+import { useSession, useToast } from '../app/providers';
+import { api, fieldErrors } from '../api/client';
+import { useApi } from '../api/useApi';
 import { ScorePicker } from '../components/risk/AssessmentForm';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select, Textarea } from '../components/ui/fields';
 import { Section } from '../components/ui/layout';
+import { PersonPicker } from '../components/ui/PersonPicker';
 
 export function RiskNew() {
-  const { ds, actor, act, clock } = useData();
+  const { actor, clock } = useSession();
   const toast = useToast();
   const nav = useNavigate();
   const [title, setTitle] = useState('');
@@ -23,19 +25,25 @@ export function RiskNew() {
   const [i, setI] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
+  const departments = useApi((signal) => api.departments(signal), []);
   const p = permit(actor, 'risk.register');
-  const deptName = (id: number) => ds.departments.find((d) => d.department_id === id)?.name ?? '';
-  const owners = ds.employees.filter((e) => e.is_active).sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name));
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const r = act((d, who, c) =>
-      registerRisk(d, { title, description, category, department_id: dept, owner_employee_id: owner, identified_date: date, likelihood: l, impact: i, mitigation_notes: notes }, who, c),
-    );
-    if (!r.ok) return setErrors(r.errors);
-    toast.push(`Risk ${r.value.risk_code} registered`);
-    nav(`/risks/${r.value.risk_code}`);
+    setSaving(true);
+    try {
+      const risk = await api.registerRisk({
+        title, description, category, department_id: dept, owner_employee_id: owner, identified_date: date, likelihood: l, impact: i, mitigation_notes: notes,
+      });
+      toast.push(`Risk ${risk.risk_code} registered`);
+      nav(`/risks/${risk.risk_code}`);
+    } catch (err) {
+      setErrors(fieldErrors(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -62,14 +70,11 @@ export function RiskNew() {
                 {(f) => (
                   <Select {...f} value={dept ?? ''} placeholder="Select…"
                     onChange={(e) => setDept(e.target.value ? Number(e.target.value) : null)}
-                    options={ds.departments.map((d) => ({ value: String(d.department_id), label: d.name }))} />
+                    options={(departments.data ?? []).map((d) => ({ value: String(d.department_id), label: d.name }))} />
                 )}
               </Field>
-              <Field label="Owner" required error={errors.owner_employee_id} hint="Anyone in the organisation can own a risk.">
-                {(f) => (
-                  <Select {...f} value={owner ?? ''} placeholder="Select…" onChange={(e) => setOwner(e.target.value ? Number(e.target.value) : null)}
-                    options={owners.map((o) => ({ value: String(o.employee_id), label: `${o.first_name} ${o.last_name} — ${o.job_title}, ${deptName(o.department_id)}` }))} />
-                )}
+              <Field label="Owner" required error={errors.owner_employee_id} hint="Anyone in the organisation can own a risk. Type to search.">
+                {(f) => <PersonPicker id={f.id} value={owner} onChange={setOwner} placeholder="Search people" invalid={f['aria-invalid']} />}
               </Field>
             </div>
           </fieldset>
@@ -84,7 +89,7 @@ export function RiskNew() {
           </fieldset>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => nav('/risks')}>Cancel</Button>
-            <Button type="submit" variant="primary" disabledReason={p.allowed ? undefined : p.reason}>Register risk</Button>
+            <Button type="submit" variant="primary" disabled={saving} disabledReason={p.allowed ? undefined : p.reason}>{saving ? 'Saving…' : 'Register risk'}</Button>
           </div>
         </Section>
       </form>

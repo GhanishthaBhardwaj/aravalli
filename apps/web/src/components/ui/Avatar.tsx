@@ -24,3 +24,15 @@ export function PersonName({ person }: { person: Employee | undefined }) {
     </span>
   );
 }
+
+/** For API rows that carry a display name rather than a whole employee record. */
+export function NameChip({ name }: { name: string | null | undefined }) {
+  if (!name) return <span className="text-subtle">Unassigned</span>;
+  const [first, ...rest] = name.trim().split(/\s+/);
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <Avatar person={{ first_name: first, last_name: rest.at(-1) ?? '' }} size={24} />
+      {name}
+    </span>
+  );
+}

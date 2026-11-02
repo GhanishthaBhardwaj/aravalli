@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { bandFor, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
-import type { HeatCell } from '../../data/selectors';
+import type { HeatCell } from '@aravalli/shared';
 import { BAND_CLASS } from '../ui/Badge';
 import { reducedMotion } from '../ui/CountUp';
 
@@ -33,7 +33,7 @@ export function HeatMap({ cells, onSelect, selected, reveal }: Props) {
               [1, 2, 3, 4, 5].map((i) => {
                 const c = cells[(l - 1) * 5 + (i - 1)];
                 const band = bandFor(l * i);
-                const n = c.rows.length;
+                const n = c.risks.length;
                 const on = selected?.likelihood === l && selected?.impact === i;
                 return (
                   <motion.button

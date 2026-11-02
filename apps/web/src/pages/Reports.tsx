@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ArrowDownTrayIcon, PrinterIcon } from '@heroicons/react/20/solid';
+import type { IncidentListItem, ResolutionRow } from '@aravalli/shared';
 import { Page } from '../app/Page';
-import { useData } from '../app/providers';
 import { downloadCsv, fmtDate } from '../app/format';
-import {
-  formatHours, fullName, incidentExceptions, resolutionByDepartment, resolutionBySeverity, riskProfileByDepartment, type ResolutionRow,
-} from '../data/selectors';
+import { api } from '../api/client';
+import { useApi, type ApiState } from '../api/useApi';
+import { formatHours } from '../lib/derive';
 import { SeverityBadge, StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, IdLink } from '../components/ui/layout';
-import { EmptyState } from '../components/ui/states';
+import { EmptyState, ErrorState, Skeleton } from '../components/ui/states';
 import { Table } from '../components/ui/Table';
 import { Tabs } from '../components/ui/Tabs';
 
@@ -48,13 +48,23 @@ function Report({ id, title, description, onCsv, children }: { id: string; title
   );
 }
 
+/** Shows a skeleton or an error until the report's data is there, then renders it. */
+function Loaded<T>({ state, children }: { state: ApiState<T>; children: (data: T) => ReactNode }) {
+  if (state.error) return <ErrorState title="This report could not be loaded" body={state.error.message} onRetry={state.reload} />;
+  if (!state.data) return <Skeleton className="h-48" />;
+  return <>{children(state.data)}</>;
+}
+
+const BANDS = ['Critical', 'High', 'Medium', 'Low', 'Unrated', 'Total'] as const;
+
 export function Reports() {
-  const { ds, clock } = useData();
   const [tab, setTab] = useState<ReportId>('risk-profile');
-  const profile = riskProfileByDepartment(ds);
-  const bySev = resolutionBySeverity(ds);
-  const byDept = resolutionByDepartment(ds);
-  const exceptions = incidentExceptions(ds, clock);
+  const profile = useApi((signal) => api.riskProfile(signal), []);
+  const resolution = useApi(
+    async (signal) => ({ bySev: await api.resolution('severity', signal), byDept: await api.resolution('department', signal) }),
+    [],
+  );
+  const exceptions = useApi((signal) => api.incidents({ needs_attention: true, limit: 100, sort: 'occurred_at', order: 'desc' }, signal), []);
 
   const resCols = (label: string) => [
     { key: 'g', header: label, render: (r: ResolutionRow) => r.group },
@@ -62,12 +72,6 @@ export function Reports() {
     { key: 'mean', header: 'Mean time', align: 'right' as const, render: (r: ResolutionRow) => <span className="num">{formatHours(r.meanHours)}</span> },
     { key: 'med', header: 'Median time', align: 'right' as const, render: (r: ResolutionRow) => <span className="num">{formatHours(r.medianHours)}</span> },
   ];
-
-  const bands = ['Critical', 'High', 'Medium', 'Low', 'Unrated', 'Total'] as const;
-  const total = profile.reduce(
-    (t, r) => ({ Critical: t.Critical + r.Critical, High: t.High + r.High, Medium: t.Medium + r.Medium, Low: t.Low + r.Low, Unrated: t.Unrated + r.Unrated, Total: t.Total + r.Total }),
-    { Critical: 0, High: 0, Medium: 0, Low: 0, Unrated: 0, Total: 0 },
-  );
 
   return (
     <Page title="Reports" description="Export management reports as CSV, or print them.">
@@ -78,86 +82,103 @@ export function Reports() {
         tabs={[
           { id: 'risk-profile', label: 'Risk profile' },
           { id: 'resolution', label: 'Resolution performance' },
-          { id: 'exceptions', label: 'Exceptions', count: exceptions.length },
+          { id: 'exceptions', label: 'Exceptions', count: exceptions.data?.page.total },
         ]}
       />
       <div className="pt-10">
         {tab === 'risk-profile' && (
-          <Report
-            id="risk-profile"
-            title="Risk profile by department"
-            description="Open risks by department and risk band."
-            onCsv={() => downloadCsv('risk-profile-by-department.csv', ['Department', ...bands], profile.map((r) => [r.department, ...bands.map((b) => r[b])]))}
-          >
-            <Card className="overflow-hidden">
-              <table className="tbl">
-                <caption className="sr-only">Open risks by department and risk band</caption>
-                <thead>
-                  <tr><th>Department</th>{bands.map((h) => <th key={h} className="right">{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {profile.map((r) => (
-                    <tr key={r.department}>
-                      <td className="font-medium">{r.department}</td>
-                      {bands.map((h) => <td key={h} className="right num">{r[h]}</td>)}
-                    </tr>
-                  ))}
-                  <tr>
-                    <td className="font-semibold">All departments</td>
-                    {bands.map((h) => <td key={h} className="right num font-semibold">{total[h]}</td>)}
-                  </tr>
-                </tbody>
-              </table>
-            </Card>
-          </Report>
+          <Loaded state={profile}>
+            {(rows) => {
+              const total = rows.reduce(
+                (t, r) => ({ Critical: t.Critical + r.Critical, High: t.High + r.High, Medium: t.Medium + r.Medium, Low: t.Low + r.Low, Unrated: t.Unrated + r.Unrated, Total: t.Total + r.Total }),
+                { Critical: 0, High: 0, Medium: 0, Low: 0, Unrated: 0, Total: 0 },
+              );
+              return (
+                <Report
+                  id="risk-profile"
+                  title="Risk profile by department"
+                  description="Open risks by department and risk band."
+                  onCsv={() => downloadCsv('risk-profile-by-department.csv', ['Department', ...BANDS], rows.map((r) => [r.department, ...BANDS.map((b) => r[b])]))}
+                >
+                  <Card className="overflow-hidden">
+                    <table className="tbl">
+                      <caption className="sr-only">Open risks by department and risk band</caption>
+                      <thead>
+                        <tr><th>Department</th>{BANDS.map((h) => <th key={h} className="right">{h}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((r) => (
+                          <tr key={r.department_id}>
+                            <td className="font-medium">{r.department}</td>
+                            {BANDS.map((h) => <td key={h} className="right num">{r[h]}</td>)}
+                          </tr>
+                        ))}
+                        <tr>
+                          <td className="font-semibold">All departments</td>
+                          {BANDS.map((h) => <td key={h} className="right num font-semibold">{total[h]}</td>)}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </Card>
+                </Report>
+              );
+            }}
+          </Loaded>
         )}
 
         {tab === 'resolution' && (
-          <Report
-            id="resolution"
-            title="Incident resolution performance"
-            description="Time from report to resolution, for incidents that have been resolved."
-            onCsv={() => downloadCsv('incident-resolution-performance.csv', ['Dimension', 'Group', 'Resolved', 'Mean hours', 'Median hours'], [
-              ...bySev.map((r) => ['Severity', r.group, r.resolved, r.meanHours?.toFixed(1) ?? '', r.medianHours?.toFixed(1) ?? '']),
-              ...byDept.map((r) => ['Department', r.group, r.resolved, r.meanHours?.toFixed(1) ?? '', r.medianHours?.toFixed(1) ?? '']),
-            ])}
-          >
-            <div className="grid gap-8 lg:grid-cols-2">
-              <Card className="overflow-hidden"><Table rows={bySev} rowKey={(r) => r.group} columns={resCols('Severity')} caption="Resolution time by severity" /></Card>
-              <Card className="overflow-hidden"><Table rows={byDept} rowKey={(r) => r.group} columns={resCols('Department')} caption="Resolution time by department" /></Card>
-            </div>
-          </Report>
+          <Loaded state={resolution}>
+            {({ bySev, byDept }) => (
+              <Report
+                id="resolution"
+                title="Incident resolution performance"
+                description="Time from report to resolution, for incidents that have been resolved."
+                onCsv={() => downloadCsv('incident-resolution-performance.csv', ['Dimension', 'Group', 'Resolved', 'Mean hours', 'Median hours'], [
+                  ...bySev.map((r) => ['Severity', r.group, r.resolved, r.meanHours?.toFixed(1) ?? '', r.medianHours?.toFixed(1) ?? '']),
+                  ...byDept.map((r) => ['Department', r.group, r.resolved, r.meanHours?.toFixed(1) ?? '', r.medianHours?.toFixed(1) ?? '']),
+                ])}
+              >
+                <div className="grid gap-8 lg:grid-cols-2">
+                  <Card className="overflow-hidden"><Table rows={bySev} rowKey={(r) => r.group} columns={resCols('Severity')} caption="Resolution time by severity" /></Card>
+                  <Card className="overflow-hidden"><Table rows={byDept} rowKey={(r) => r.group} columns={resCols('Department')} caption="Resolution time by department" /></Card>
+                </div>
+              </Report>
+            )}
+          </Loaded>
         )}
 
         {tab === 'exceptions' && (
-          <Report
-            id="exceptions"
-            title="Unlinked and unassigned incidents"
-            description="Open incidents with no assignee or no linked risk. Closed incidents are final and are not listed."
-            onCsv={() => downloadCsv('incident-exceptions.csv', ['Code', 'Title', 'Severity', 'Status', 'Department', 'Assignee', 'Linked risk', 'Occurred'],
-              exceptions.map((r) => [r.incident.incident_code, r.incident.title, r.incident.severity, r.incident.status, r.department.name,
-                r.assignee ? fullName(r.assignee) : 'Unassigned', r.risk?.risk_code ?? 'None', r.incident.occurred_at.slice(0, 10)]))}
-          >
-            <Card className="overflow-hidden">
-              <Table
-                rows={exceptions}
-                rowKey={(r) => r.incident.incident_id}
-                rowHref={(r) => `/incidents/${r.incident.incident_code}`}
-                caption="Open incidents with a missing assignee or risk link"
-                empty={<EmptyState title="No exceptions" body="Every open incident has an assignee and a linked risk." />}
-                columns={[
-                  { key: 'c', header: 'Code', render: (r) => <IdLink to={`/incidents/${r.incident.incident_code}`}>{r.incident.incident_code}</IdLink> },
-                  { key: 't', header: 'Incident', render: (r) => <span className="block max-w-[36ch] truncate font-medium" title={r.incident.title}>{r.incident.title}</span> },
-                  { key: 's', header: 'Severity', render: (r) => <SeverityBadge severity={r.incident.severity} /> },
-                  { key: 'st', header: 'Status', render: (r) => <StatusBadge status={r.incident.status} /> },
-                  { key: 'd', header: 'Department', hideBelow: 'md', render: (r) => r.department.name },
-                  { key: 'a', header: 'Assignee', hideBelow: 'md', render: (r) => (r.assignee ? fullName(r.assignee) : <strong className="font-semibold">Unassigned</strong>) },
-                  { key: 'r', header: 'Linked risk', render: (r) => r.risk?.risk_code ?? <strong className="font-semibold">None</strong> },
-                  { key: 'o', header: 'Occurred', hideBelow: 'md', render: (r) => fmtDate(r.incident.occurred_at) },
-                ]}
-              />
-            </Card>
-          </Report>
+          <Loaded state={exceptions}>
+            {({ data: rows, page }) => (
+              <Report
+                id="exceptions"
+                title="Unlinked and unassigned incidents"
+                description={`Open incidents with no assignee or no linked risk. Closed incidents are final and are not listed.${page.total > rows.length ? ` Showing the ${rows.length} most recent of ${page.total}.` : ''}`}
+                onCsv={() => downloadCsv('incident-exceptions.csv', ['Code', 'Title', 'Severity', 'Status', 'Department', 'Assignee', 'Linked risk', 'Occurred'],
+                  rows.map((r) => [r.incident_code, r.title, r.severity, r.status, r.department_name, r.assigned_to_name ?? 'Unassigned', r.risk_code ?? 'None', r.occurred_at.slice(0, 10)]))}
+              >
+                <Card className="overflow-hidden">
+                  <Table<IncidentListItem>
+                    rows={rows}
+                    rowKey={(r) => r.incident_id}
+                    rowHref={(r) => `/incidents/${r.incident_code}`}
+                    caption="Open incidents with a missing assignee or risk link"
+                    empty={<EmptyState title="No exceptions" body="Every open incident has an assignee and a linked risk." />}
+                    columns={[
+                      { key: 'c', header: 'Code', render: (r) => <IdLink to={`/incidents/${r.incident_code}`}>{r.incident_code}</IdLink> },
+                      { key: 't', header: 'Incident', render: (r) => <span className="block max-w-[36ch] truncate font-medium" title={r.title}>{r.title}</span> },
+                      { key: 's', header: 'Severity', render: (r) => <SeverityBadge severity={r.severity} /> },
+                      { key: 'st', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+                      { key: 'd', header: 'Department', hideBelow: 'md', render: (r) => r.department_name },
+                      { key: 'a', header: 'Assignee', hideBelow: 'md', render: (r) => r.assigned_to_name ?? <strong className="font-semibold">Unassigned</strong> },
+                      { key: 'r', header: 'Linked risk', render: (r) => r.risk_code ?? <strong className="font-semibold">None</strong> },
+                      { key: 'o', header: 'Occurred', hideBelow: 'md', render: (r) => fmtDate(r.occurred_at) },
+                    ]}
+                  />
+                </Card>
+              </Report>
+            )}
+          </Loaded>
         )}
       </div>
     </Page>

@@ -9,7 +9,10 @@ export interface Column<T> {
   key: string;
   header: string;
   render: (r: T) => ReactNode;
+  /** Client-side sorting of the rows already loaded. */
   sort?: (r: T) => string | number | null;
+  /** Server-side sorting: the `sort` value the API understands. */
+  sortKey?: string;
   align?: 'right';
   /** Hide this column below a breakpoint (sm = 640px, md = 768px). The record page still shows everything. */
   hideBelow?: 'sm' | 'md';
@@ -17,16 +20,29 @@ export interface Column<T> {
 
 const HIDE: Record<string, string> = { '': '', sm: 'hidden sm:table-cell', md: 'hidden md:table-cell' };
 
+/** The page, sort and total live on the server; the table only shows what it is given. */
+export interface ServerPaging {
+  total: number;
+  page: number;
+  pageSize: number;
+  sort: string;
+  dir: 'asc' | 'desc';
+  onSort: (key: string, dir: 'asc' | 'desc') => void;
+  onPage: (page: number) => void;
+}
+
 interface Props<T> {
   rows: T[];
   columns: Column<T>[];
   rowKey: (r: T) => string | number;
   rowHref?: (r: T) => string;
   caption: string;
-  /** Sync sort + page to the URL and show a results count. */
+  /** Client mode: sync sort + page to the URL and show a results count. */
   urlState?: boolean;
   pageSize?: number;
   defaultSort?: { key: string; dir: 'asc' | 'desc' };
+  /** Server mode (overrides the client sorting and paging above). */
+  server?: ServerPaging;
   noun?: string;
   /** Shown when there are no rows. */
   empty?: ReactNode;
@@ -37,7 +53,7 @@ interface Props<T> {
 }
 
 export function Table<T>({
-  rows, columns, rowKey, rowHref, caption, urlState, pageSize, defaultSort, noun = 'rows', empty, loading, error, onRetry,
+  rows, columns, rowKey, rowHref, caption, urlState, pageSize, defaultSort, server, noun = 'rows', empty, loading, error, onRetry,
 }: Props<T>) {
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -45,11 +61,12 @@ export function Table<T>({
     sort: defaultSort?.key, dir: defaultSort?.dir ?? 'asc', page: 1,
   });
 
-  const sortKey = urlState ? params.get('sort') ?? defaultSort?.key : local.sort;
-  const dir = (urlState ? params.get('dir') ?? defaultSort?.dir ?? 'asc' : local.dir) as 'asc' | 'desc';
-  const page = Math.max(1, Number(urlState ? params.get('page') ?? 1 : local.page) || 1);
+  const sortKey = server ? server.sort : urlState ? params.get('sort') ?? defaultSort?.key : local.sort;
+  const dir = (server ? server.dir : urlState ? params.get('dir') ?? defaultSort?.dir ?? 'asc' : local.dir) as 'asc' | 'desc';
+  const page = server ? server.page : Math.max(1, Number(urlState ? params.get('page') ?? 1 : local.page) || 1);
 
   const sorted = useMemo(() => {
+    if (server) return rows;
     const col = columns.find((c) => c.key === sortKey);
     if (!col?.sort) return rows;
     const f = col.sort;
@@ -61,11 +78,13 @@ export function Table<T>({
       if (y === null) return -1;
       return (x < y ? -1 : 1) * m;
     });
-  }, [rows, columns, sortKey, dir]);
+  }, [rows, columns, sortKey, dir, server]);
 
-  const pages = pageSize ? Math.max(1, Math.ceil(sorted.length / pageSize)) : 1;
+  const total = server ? server.total : sorted.length;
+  const size = server ? server.pageSize : pageSize;
+  const pages = size ? Math.max(1, Math.ceil(total / size)) : 1;
   const cur = Math.min(page, pages);
-  const view = pageSize ? sorted.slice((cur - 1) * pageSize, cur * pageSize) : sorted;
+  const view = server || !pageSize ? sorted : sorted.slice((cur - 1) * pageSize, cur * pageSize);
 
   const setState = (next: { sort?: string; dir?: 'asc' | 'desc'; page?: number }) => {
     if (urlState) {
@@ -78,8 +97,14 @@ export function Table<T>({
     } else setLocal((s) => ({ ...s, ...next }));
   };
 
-  const toggle = (key: string) =>
-    setState(sortKey === key ? { dir: dir === 'asc' ? 'desc' : 'asc', page: 1 } : { sort: key, dir: 'asc', page: 1 });
+  const toggle = (c: Column<T>) => {
+    if (server) {
+      const key = c.sortKey!;
+      server.onSort(key, sortKey === key ? (dir === 'asc' ? 'desc' : 'asc') : 'asc');
+      return;
+    }
+    setState(sortKey === c.key ? { dir: dir === 'asc' ? 'desc' : 'asc', page: 1 } : { sort: c.key, dir: 'asc', page: 1 });
+  };
 
   if (error) return <ErrorState title="These rows could not be loaded" body={error} onRetry={onRetry} />;
   if (!loading && !rows.length && empty) return <>{empty}</>;
@@ -92,11 +117,12 @@ export function Table<T>({
           <thead>
             <tr>
               {columns.map((c) => {
-                const active = c.key === sortKey;
+                const sortable = server ? Boolean(c.sortKey) : Boolean(c.sort);
+                const active = server ? c.sortKey === sortKey : c.key === sortKey;
                 return (
                   <th key={c.key} className={`${c.align === 'right' ? 'right' : ''} ${HIDE[c.hideBelow ?? '']}`} aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
-                    {c.sort ? (
-                      <button type="button" onClick={() => toggle(c.key)} className="inline-flex items-center gap-1 hover:text-fg">
+                    {sortable ? (
+                      <button type="button" onClick={() => toggle(c)} className="inline-flex items-center gap-1 hover:text-fg">
                         {c.header}
                         {active ? (dir === 'asc' ? <ArrowUpIcon className="h-3.5 w-3.5" /> : <ArrowDownIcon className="h-3.5 w-3.5" />) : <ChevronUpDownIcon className="h-3.5 w-3.5 opacity-50" />}
                       </button>
@@ -134,8 +160,15 @@ export function Table<T>({
           </tbody>
         </table>
       </div>
-      {!loading && (urlState || pageSize) && (
-        <Pagination total={sorted.length} page={cur} pages={pages} pageSize={pageSize ?? sorted.length} noun={noun} onPage={(p) => setState({ page: p })} />
+      {!loading && (server || urlState || pageSize) && (
+        <Pagination
+          total={total}
+          page={cur}
+          pages={pages}
+          pageSize={size ?? total}
+          noun={noun}
+          onPage={(p) => (server ? server.onPage(p) : setState({ page: p }))}
+        />
       )}
     </div>
   );

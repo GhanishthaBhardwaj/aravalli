@@ -39,8 +39,8 @@ test('an Employee can report incidents but not manage risks, and can only update
   await page.getByLabel('Occurred').fill('2026-10-19T10:00');
   await page.getByLabel('Affected department').selectOption({ label: 'Finance' });
   await page.getByRole('button', { name: 'Report incident' }).click();
-  await expect(page).toHaveURL(/\/incidents\/INC-0037/);
-  await expect(toast(page)).toContainText('INC-0037');
+  await expect(page).toHaveURL(/\/incidents\/INC-\d{4}/);
+  await expect(toast(page)).toContainText(/INC-\d{4}/);
 
   // may update it, may not assign it, may not close it
   await page.getByLabel('Note').fill('Mopped up and moved the boxes.');

@@ -68,11 +68,7 @@ test('the one accent is orange, used for the primary action', async ({ page }) =
 
 test('a list with nothing in it explains itself instead of showing an empty table', async ({ page }) => {
   // an organisation that has just been created and has no departments yet
-  await open(page, '/');
-  await page.evaluate(() => {
-    const saved = JSON.parse(localStorage.getItem('aravalli:state') ?? '{}');
-    localStorage.setItem('aravalli:state', JSON.stringify({ ...saved, ds: { ...saved.ds, departments: [] } }));
-  });
+  await page.route('**/api/departments', (route) => route.fulfill({ json: { data: [] } }));
   await open(page, '/departments');
   await expect(page.getByText('No departments yet')).toBeVisible();
   await expect(page.getByRole('table')).toHaveCount(0);

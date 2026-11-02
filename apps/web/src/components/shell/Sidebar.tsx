@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  ArrowUturnLeftIcon, BuildingOffice2Icon, ClipboardDocumentListIcon, DocumentChartBarIcon, ExclamationTriangleIcon,
+  BuildingOffice2Icon, ClipboardDocumentListIcon, DocumentChartBarIcon, ExclamationTriangleIcon,
   PlusCircleIcon, Squares2X2Icon, TableCellsIcon, UsersIcon,
 } from '@heroicons/react/24/outline';
-import { useData } from '../../app/providers';
+import { useSession } from '../../app/providers';
 import { PRODUCT } from '../../app/brand';
 import { ThemeToggle } from '../ui/theme';
 
@@ -26,30 +25,9 @@ const NAV: { group: string; items: Item[] }[] = [
   { group: 'Reports', items: [{ to: '/reports', label: 'Reports', icon: DocumentChartBarIcon }] },
 ];
 
-function ResetLink({ expanded }: { expanded: boolean }) {
-  const { reset } = useData();
-  const [sure, setSure] = useState(false);
-  useEffect(() => {
-    if (!sure) return;
-    const t = setTimeout(() => setSure(false), 4000);
-    return () => clearTimeout(t);
-  }, [sure]);
-  return (
-    <button
-      type="button"
-      title="Restore the original sample data"
-      onClick={() => (sure ? (reset(), setSure(false)) : setSure(true))}
-      className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[14px] text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
-    >
-      <ArrowUturnLeftIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      <span className={expanded ? '' : 'hidden lg:inline'}>{sure ? 'Click again to reset' : 'Reset sample data'}</span>
-    </button>
-  );
-}
-
 /** `drawer` shows labels at every width and adds the theme switch (the top bar has it on larger screens). */
 export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?: () => void }) {
-  const { organisation } = useData();
+  const { organisation } = useSession();
   const label = drawer ? '' : 'hidden lg:inline';
   return (
     <nav aria-label="Main" className="flex h-full flex-col bg-surface">
@@ -88,10 +66,11 @@ export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?:
         ))}
       </div>
 
-      <div className="space-y-1 border-t border-line px-3 py-3">
-        {drawer && <div className="px-3 pb-2 pt-1"><ThemeToggle /></div>}
-        <ResetLink expanded={Boolean(drawer)} />
-      </div>
+      {drawer && (
+        <div className="border-t border-line px-3 py-3">
+          <div className="px-3 pb-2 pt-1"><ThemeToggle /></div>
+        </div>
+      )}
     </nav>
   );
 }

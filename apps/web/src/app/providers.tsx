@@ -1,83 +1,26 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { DEMO_CLOCK, systemClock } from '@aravalli/shared';
-import type { Clock, Dataset, Employee, Organisation } from '@aravalli/shared';
-import { initialData } from '../data/store';
-import type { Result } from '../data/store';
+import { systemClock } from '@aravalli/shared';
+import type { Clock, Employee, OrganisationSummary } from '@aravalli/shared';
+import { api, getSession, setSession } from '../api/client';
+import { ErrorState, PageSkeleton } from '../components/ui/states';
 
-// ------------------------------------------------------------ saved data
-// The demo keeps its data in the browser. A saved copy is only trusted if it was
-// written by this storage version AND from the same sample dataset; otherwise it is
-// thrown away. The fingerprint makes that automatic when the sample data changes.
-const STORAGE_KEY = 'aravalli:state';
-const STORAGE_VERSION = 1;
-
-interface Persisted { version: number; fingerprint: string; actorId: number; ds: Dataset }
-
-/** FNV-1a hash of the sample dataset: changes whenever the sample data changes. */
-function fingerprintOf(ds: Dataset): string {
-  const text = JSON.stringify(ds);
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(16);
-}
-
-const SAMPLE_FINGERPRINT = fingerprintOf(initialData());
-
-/** The person the demo starts as: the first Risk Officer, else the first employee. */
-const defaultActorId = (ds: Dataset) => (ds.employees.find((e) => e.role === 'Risk Officer') ?? ds.employees[0]).employee_id;
-
-const looksLikeDataset = (ds: unknown): ds is Dataset => {
-  const d = ds as Partial<Dataset> | null;
-  return Boolean(d && d.organisation && ['departments', 'employees', 'risks', 'risk_assessments', 'incidents', 'incident_updates']
-    .every((k) => Array.isArray((d as Record<string, unknown>)[k])));
-};
-
-function fresh(): Persisted {
-  const ds = initialData();
-  return { version: STORAGE_VERSION, fingerprint: SAMPLE_FINGERPRINT, actorId: defaultActorId(ds), ds };
-}
-
-function load(): Persisted {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const p = JSON.parse(raw) as Persisted;
-      if (p.version === STORAGE_VERSION && p.fingerprint === SAMPLE_FINGERPRINT && typeof p.actorId === 'number' && looksLikeDataset(p.ds)) return p;
-    }
-  } catch {
-    /* storage unavailable or unreadable: start from the sample data */
-  }
-  return fresh();
-}
-
-function save(p: Persisted) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
-
-// ------------------------------------------------------------------- data
-interface DataCtx {
-  ds: Dataset;
-  organisation: Organisation;
+// ---------------------------------------------------------------- session
+// Which organisation we are looking at and who is "acting". DEV ONLY until Phase 3 replaces this with a login;
+// the choice is sent to the API as headers (see api/client.ts). No business data is kept in the browser.
+interface SessionCtx {
+  organisations: OrganisationSummary[];
+  organisation: OrganisationSummary;
+  /** People offered by the "Acting as" picker (the full employee record, so role rules can disable buttons). */
+  people: Employee[];
   actor: Employee;
-  /** Real time for real organisations, a fixed moment for the sample one. */
+  /** The real clock: the server decides what "now" means for stored data, this only limits date pickers. */
   clock: Clock;
   setActorId: (id: number) => void;
-  /** Runs a store function against the latest data; commits the result if ok. */
-  act: <T>(fn: (ds: Dataset, actor: Employee, clock: Clock) => Result<T>) => Result<T>;
-  reset: () => void;
+  setOrganisationId: (id: number) => void;
 }
-const DataContext = createContext<DataCtx | null>(null);
-
-const clockFor = (org: Organisation): Clock => (org.is_demo ? DEMO_CLOCK : systemClock);
+const SessionContext = createContext<SessionCtx | null>(null);
 
 // ------------------------------------------------------------------ toasts
 interface Toast { id: number; message: string }
@@ -89,89 +32,109 @@ export interface Meta { title: string }
 interface MetaCtx { meta: Meta; setMeta: (m: Meta) => void }
 const MetaContext = createContext<MetaCtx | null>(null);
 
+type Boot =
+  | { state: 'loading' }
+  | { state: 'error'; message: string }
+  | { state: 'ready'; organisations: OrganisationSummary[]; organisationId: number; people: Employee[]; actorId: number };
+
+const PICKER_SIZE = 100;
+
+async function boot(wantedOrg: number | null, wantedActor: number | null): Promise<Boot> {
+  const organisations = await api.organisations();
+  if (!organisations.length) return { state: 'error', message: 'There are no organisations in the database yet. Run npm run db:seed.' };
+  const organisation = organisations.find((o) => o.organisation_id === wantedOrg) ?? organisations[0];
+  setSession({ organisationId: organisation.organisation_id });
+  const page = await api.employees({ limit: PICKER_SIZE, sort: 'role', active: true });
+  const people = page.data as Employee[];
+  if (!people.length) return { state: 'error', message: `${organisation.name} has no employees yet, so nobody can act.` };
+  const actor = people.find((p) => p.employee_id === wantedActor) ?? people.find((p) => p.role === 'Risk Officer') ?? people[0];
+  setSession({ actorId: actor.employee_id });
+  return { state: 'ready', organisations, organisationId: organisation.organisation_id, people, actorId: actor.employee_id };
+}
+
 export function Providers({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Persisted>(load);
-  const ref = useRef(state);
+  const [b, setB] = useState<Boot>({ state: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [meta, setMeta] = useState<Meta>({ title: '' });
 
   useEffect(() => {
-    ref.current = state;
-    save(state);
-  }, [state]);
+    let live = true;
+    const s = getSession();
+    boot(s.organisationId, s.actorId).then(
+      (r) => live && setB(r),
+      (e: unknown) => live && setB({ state: 'error', message: e instanceof Error ? e.message : 'The server could not be reached.' }),
+    );
+    return () => { live = false; };
+  }, [attempt]);
 
-  const actor = state.ds.employees.find((e) => e.employee_id === state.actorId) ?? state.ds.employees[0];
-  const clock = clockFor(state.ds.organisation);
-
-  const act = useCallback<DataCtx['act']>((fn) => {
-    const cur = ref.current;
-    const who = cur.ds.employees.find((e) => e.employee_id === cur.actorId) ?? cur.ds.employees[0];
-    const r = fn(cur.ds, who, clockFor(cur.ds.organisation));
-    if (r.ok) {
-      ref.current = { ...cur, ds: r.data };
-      setState(ref.current);
-    }
-    return r;
+  const setActorId = useCallback((id: number) => {
+    setSession({ actorId: id });
+    setB((s) => (s.state === 'ready' ? { ...s, actorId: id } : s));
   }, []);
 
-  const data = useMemo<DataCtx>(
-    () => ({
-      ds: state.ds,
-      organisation: state.ds.organisation,
-      actor,
-      clock,
-      setActorId: (id) => setState((s) => ({ ...s, actorId: id })),
-      act,
-      reset: () => {
-        ref.current = fresh();
-        setState(ref.current);
-      },
-    }),
-    [state, actor, clock, act],
-  );
+  const setOrganisationId = useCallback((id: number) => {
+    setSession({ organisationId: id, actorId: null });
+    setB({ state: 'loading' });
+    setAttempt((n) => n + 1);
+  }, []);
+
+  const session = useMemo<SessionCtx | null>(() => {
+    if (b.state !== 'ready') return null;
+    const organisation = b.organisations.find((o) => o.organisation_id === b.organisationId)!;
+    const actor = b.people.find((p) => p.employee_id === b.actorId) ?? b.people[0];
+    return { organisations: b.organisations, organisation, people: b.people, actor, clock: systemClock, setActorId, setOrganisationId };
+  }, [b, setActorId, setOrganisationId]);
 
   const push = useCallback((message: string) => {
     const id = Date.now() + Math.random();
-    // saved changes in the sample organisation are labelled as demo changes
-    const text = ref.current.ds.organisation.is_demo ? `${message} (demo)` : message;
-    setToasts((t) => [...t, { id, message: text }]);
+    setToasts((t) => [...t, { id, message }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
   const toast = useMemo(() => ({ push }), [push]);
   const metaCtx = useMemo(() => ({ meta, setMeta }), [meta]);
 
   return (
-    <DataContext.Provider value={data}>
-      <ToastContext.Provider value={toast}>
-        <MetaContext.Provider value={metaCtx}>
-          {children}
-          <div className="no-print fixed bottom-4 right-4 z-[60] flex w-[min(92vw,380px)] flex-col gap-2" role="status" aria-live="polite">
-            <AnimatePresence initial={false}>
-              {toasts.map((t) => (
-                <motion.div
-                  key={t.id}
-                  layout
-                  data-testid="toast"
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: 24 }}
-                  transition={{ duration: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
-                  className="rounded-xl border border-line-strong bg-fg px-4 py-3 text-[14px] font-medium text-bg shadow-pop"
-                >
-                  {t.message}
-                </motion.div>
-              ))}
-            </AnimatePresence>
+    <ToastContext.Provider value={toast}>
+      <MetaContext.Provider value={metaCtx}>
+        {session ? (
+          // keyed by organisation, so switching organisation throws away every screen's loaded data
+          <SessionContext.Provider key={session.organisation.organisation_id} value={session}>{children}</SessionContext.Provider>
+        ) : (
+          <div className="mx-auto max-w-[1180px] px-4 py-14 md:px-10">
+            {b.state === 'error' ? (
+              <ErrorState title="Aravalli can't load" body={b.message} onRetry={() => { setB({ state: 'loading' }); setAttempt((n) => n + 1); }} />
+            ) : (
+              <PageSkeleton />
+            )}
           </div>
-        </MetaContext.Provider>
-      </ToastContext.Provider>
-    </DataContext.Provider>
+        )}
+        <div className="no-print fixed bottom-4 right-4 z-[60] flex w-[min(92vw,380px)] flex-col gap-2" role="status" aria-live="polite">
+          <AnimatePresence initial={false}>
+            {toasts.map((t) => (
+              <motion.div
+                key={t.id}
+                layout
+                data-testid="toast"
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 24 }}
+                transition={{ duration: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
+                className="rounded-xl border border-line-strong bg-fg px-4 py-3 text-[14px] font-medium text-bg shadow-pop"
+              >
+                {t.message}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </MetaContext.Provider>
+    </ToastContext.Provider>
   );
 }
 
-export function useData() {
-  const c = useContext(DataContext);
-  if (!c) throw new Error('useData outside Providers');
+export function useSession() {
+  const c = useContext(SessionContext);
+  if (!c) throw new Error('useSession outside Providers');
   return c;
 }
 export function useToast() {

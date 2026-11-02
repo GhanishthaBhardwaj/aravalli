@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, toast } from './helpers';
+import { choosePerson, open, ready, toast } from './helpers';
 
 async function reportBasic(page: import('@playwright/test').Page, title: string) {
   await open(page, '/incidents/new');
@@ -11,7 +11,7 @@ async function reportBasic(page: import('@playwright/test').Page, title: string)
   await page.getByRole('button', { name: 'Report incident' }).click();
 }
 
-test('report incident validates, then creates an Open, unassigned, unlinked INC-0037', async ({ page }) => {
+test('report incident validates, then creates an Open, unassigned, unlinked incident with a generated code', async ({ page }) => {
   await open(page, '/incidents/new');
   await page.getByRole('button', { name: 'Report incident' }).click();
   for (const msg of ['Title is required.', 'Description is required.', 'Choose a severity.', 'Choose the affected department.']) {
@@ -27,18 +27,18 @@ test('report incident validates, then creates an Open, unassigned, unlinked INC-
 
   await page.getByLabel('Occurred').fill('2026-10-19T09:30');
   await page.getByRole('button', { name: 'Report incident' }).click();
-  await expect(page).toHaveURL(/\/incidents\/INC-0037/);
-  await expect(toast(page)).toContainText('INC-0037');
+  await expect(page).toHaveURL(/\/incidents\/INC-\d{4}/);
+  await expect(toast(page)).toContainText(/INC-\d{4}/);
   await expect(page.getByText('Unassigned').first()).toBeVisible();
   await expect(page.getByText('Incident reported')).toBeVisible();
 });
 
 test('assign, walk to Resolved and Closed, reopen, and see the whole timeline', async ({ page }) => {
   await reportBasic(page, 'Hydraulic hose burst on Line 5');
-  await expect(page).toHaveURL(/\/incidents\/INC-0037/);
+  await expect(page).toHaveURL(/\/incidents\/INC-\d{4}/);
 
   // assign
-  await page.getByLabel('Assignee').selectOption({ label: 'Suresh Yadav — Maintenance Supervisor' });
+  await choosePerson(page, 'Assignee', 'Suresh Yadav');
   await page.getByRole('button', { name: 'Assign', exact: true }).click();
   await expect(toast(page)).toContainText('Assignment saved');
   await expect(page.getByText('Assigned to Suresh Yadav')).toBeVisible();
@@ -69,6 +69,9 @@ test('assign, walk to Resolved and Closed, reopen, and see the whole timeline', 
   await page.getByLabel('Note').fill('Fitting re-seated; leak-free for a full shift.');
   await status.selectOption('Resolved');
   await page.getByRole('button', { name: 'Post update' }).click();
+  // wait for the server to answer before the next step, or the form would be cleared under the typing
+  await expect(page.getByText('Fitting re-seated; leak-free for a full shift.')).toBeVisible();
+  await expect(page.getByLabel('Note')).toHaveValue('');
   await page.getByLabel('Note').fill('Verified by the EHS officer.');
   await status.selectOption('Closed');
   await page.getByRole('button', { name: 'Post update' }).click();
@@ -102,13 +105,18 @@ test('link and unlink a risk, each writing a timeline entry', async ({ page }) =
 
 test('incident register filters: unassigned, unlinked, severity and status all work', async ({ page }) => {
   await open(page, '/incidents');
-  await expect(page.getByText(/Showing 1–20 of 36 incidents/)).toBeVisible();
+  await expect(page.getByText(/Showing 1–20 of \d+ incidents/)).toBeVisible();
   await page.getByLabel('Assignee').selectOption('none');
   await expect(page).toHaveURL(/assignee=none/);
-  await expect(page.locator('tbody tr.row-link')).toHaveCount(3);
+  await ready(page);
+  const unassigned = page.locator('tbody tr.row-link');
+  expect(await unassigned.count()).toBeGreaterThan(0);
+  for (const row of await unassigned.all()) await expect(row).toContainText('Unassigned');
   await page.getByRole('button', { name: 'Clear filters' }).click();
   await page.getByLabel('Severity').selectOption('Critical');
   await page.getByLabel('Status').selectOption('Closed');
-  await expect(page.getByText(/Showing 1–1 of 1 incidents|Showing 1–1 of 1/)).toBeVisible();
+  await ready(page);
+  const closedCritical = page.locator('tbody tr.row-link');
+  expect(await closedCritical.count()).toBeGreaterThan(0);
+  for (const row of await closedCritical.all()) await expect(row).toContainText(/Critical[\s\S]*Closed/);
 });
-

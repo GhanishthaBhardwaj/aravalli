@@ -18,10 +18,11 @@ export async function kpis(db: Executor, organisationId: number, now: string): P
      FROM v_risk_current WHERE organisation_id = ?`,
     [organisationId],
   );
-  const inc = await one<{ open_incidents: number; critical_open: number; resolved_30: number; mean_hours: number | null }>(
+  const inc = await one<{ open_incidents: number; critical_open: number; unassigned_open: number; resolved_30: number; mean_hours: number | null }>(
     db,
     `SELECT SUM(status IN ${OPEN}) AS open_incidents,
             SUM(status IN ${OPEN} AND severity = 'Critical') AS critical_open,
+            SUM(status IN ${OPEN} AND assigned_to IS NULL) AS unassigned_open,
             SUM(resolved_at IS NOT NULL AND resolved_at >= DATE_SUB(?, INTERVAL 30 DAY)) AS resolved_30,
             AVG(TIMESTAMPDIFF(SECOND, reported_at, resolved_at)) / 3600 AS mean_hours
      FROM incident WHERE organisation_id = ?`,
@@ -33,6 +34,7 @@ export async function kpis(db: Executor, organisationId: number, now: string): P
     totalRisks: Number(risks?.total ?? 0),
     openIncidents: Number(inc?.open_incidents ?? 0),
     criticalOpenIncidents: Number(inc?.critical_open ?? 0),
+    unassignedOpenIncidents: Number(inc?.unassigned_open ?? 0),
     resolvedLast30: Number(inc?.resolved_30 ?? 0),
     meanHoursToResolve: inc?.mean_hours === null || inc?.mean_hours === undefined ? null : Number(inc.mean_hours),
   };
@@ -77,13 +79,14 @@ export async function recentActivity(db: Executor, organisationId: number, n: nu
 export async function heatmap(db: Executor, organisationId: number, mode: 'current' | 'first'): Promise<HeatCell[]> {
   const sql =
     mode === 'current'
-      ? `SELECT v.likelihood, v.impact, v.risk_id, v.risk_code, v.title, v.risk_score, v.severity_band, v.department_name, v.owner_name, v.status
+      ? `SELECT v.likelihood, v.impact, v.risk_id, v.risk_code, v.title, v.risk_score, v.severity_band, v.department_name, v.owner_name, v.status,
+                (SELECT a.risk_score FROM risk_assessment a WHERE a.risk_id = v.risk_id AND a.organisation_id = v.organisation_id ORDER BY a.assessment_date, a.assessment_id LIMIT 1) AS first_score
          FROM v_risk_current v
          WHERE v.organisation_id = ? AND v.status <> 'Closed' AND v.likelihood IS NOT NULL
          ORDER BY v.risk_score DESC, v.risk_code`
       : `SELECT f.likelihood, f.impact, v.risk_id, v.risk_code, v.title, f.risk_score,
                 CASE WHEN f.risk_score >= 20 THEN 'Critical' WHEN f.risk_score >= 10 THEN 'High' WHEN f.risk_score >= 5 THEN 'Medium' ELSE 'Low' END AS severity_band,
-                v.department_name, v.owner_name, v.status
+                v.department_name, v.owner_name, v.status, f.risk_score AS first_score
          FROM v_risk_current v
          JOIN (SELECT a.*, ROW_NUMBER() OVER (PARTITION BY a.risk_id ORDER BY a.assessment_date, a.assessment_id) AS rn
                FROM risk_assessment a WHERE a.organisation_id = ?) f ON f.risk_id = v.risk_id AND f.organisation_id = v.organisation_id AND f.rn = 1

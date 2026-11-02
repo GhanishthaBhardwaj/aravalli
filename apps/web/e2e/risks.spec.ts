@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { open, pick, rowCount, toast } from './helpers';
+import { choosePerson, open, pick, rowCount, toast } from './helpers';
 
-test('register risk validates, previews the score and creates RSK-0041 as Assessed', async ({ page }) => {
+test('register risk validates, previews the score and creates a generated code and shows it as Assessed', async ({ page }) => {
   await open(page, '/risks/new');
   await page.getByRole('button', { name: 'Register risk' }).click();
   for (const msg of ['Title is required.', 'Description is required.', 'Choose a category.', 'Choose a department.', 'Choose an owner.']) {
@@ -16,13 +16,10 @@ test('register risk validates, previews the score and creates RSK-0041 as Assess
   await page.getByLabel('Description').fill('Handover notes live in one shared notebook.');
   await page.getByLabel('Category').selectOption('Operational');
   await page.getByLabel('Department').selectOption({ label: 'Operations' });
-  // anyone active can own a risk, whatever their department
-  const owner = page.getByLabel('Owner');
-  await expect(owner).toBeEnabled();
-  const owners = await owner.locator('option').allTextContents();
-  expect(owners.join(' ')).toContain('Harpreet Singh');
-  expect(owners.join(' ')).toContain('Rajesh Khanna');
-  await owner.selectOption({ label: owners.find((o) => o.includes('Rajesh Khanna')) ?? '' }); // a Finance person owning an Operations risk
+  // anyone active can own a risk, whatever their department: the search finds people from every department
+  await page.getByLabel('Owner').fill('Harpreet');
+  await expect(page.getByRole('listbox').getByRole('option', { name: /Harpreet Singh/ })).toBeVisible();
+  await choosePerson(page, 'Owner', 'Rajesh Khanna'); // a Finance person owning an Operations risk
 
   await pick(page, 'Likelihood', 4);
   await pick(page, 'Impact', 5);
@@ -30,8 +27,8 @@ test('register risk validates, previews the score and creates RSK-0041 as Assess
   await expect(page.getByText('Critical').first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Register risk' }).click();
-  await expect(page).toHaveURL(/\/risks\/RSK-0041/);
-  await expect(toast(page)).toContainText('RSK-0041');
+  await expect(page).toHaveURL(/\/risks\/RSK-\d{4}/);
+  await expect(toast(page)).toContainText(/RSK-\d{4}/);
   await expect(page.getByText('Assessed').first()).toBeVisible();
   await expect(page.getByRole('main').getByText('Rajesh Khanna').first()).toBeVisible();
 });
@@ -42,9 +39,9 @@ test('a risk registered without a score is Identified and cannot move to Assesse
   await page.getByLabel('Description').fill('Not yet assessed.');
   await page.getByLabel('Category').selectOption('Financial');
   await page.getByLabel('Department').selectOption({ label: 'Finance' });
-  await page.getByLabel('Owner').selectOption({ index: 1 });
+  await choosePerson(page, 'Owner', 'Ananya');
   await page.getByRole('button', { name: 'Register risk' }).click();
-  await expect(page).toHaveURL(/\/risks\/RSK-0041/);
+  await expect(page).toHaveURL(/\/risks\/RSK-\d{4}/);
   await expect(page.getByText('Identified').first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Change status' }).click();
@@ -111,11 +108,14 @@ test('closing a risk needs a note and the closure is applied', async ({ page }) 
 
 test('register filters keep their state in the URL, sort, paginate and show an empty state', async ({ page }) => {
   await open(page, '/risks');
-  await expect(page.getByText('Showing 1–20 of 40 risks')).toBeVisible();
+  const summary = page.getByText(/Showing 1–20 of \d+ risks/);
+  await expect(summary).toBeVisible();
+  const total = Number(/of (\d+) risks/.exec((await summary.textContent()) ?? '')![1]);
+  expect(total).toBeGreaterThan(20);
 
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page).toHaveURL(/page=2/);
-  await expect(page.getByText('Showing 21–40 of 40 risks')).toBeVisible();
+  await expect(page.getByText(`Showing 21–${Math.min(40, total)} of ${total} risks`)).toBeVisible();
 
   await page.getByLabel('Department').selectOption({ label: 'Finance' });
   await expect(page).toHaveURL(/department=1/);
@@ -132,7 +132,7 @@ test('register filters keep their state in the URL, sort, paginate and show an e
   await page.getByRole('textbox', { name: 'Search', exact: true }).fill('zzzz-no-such-risk');
   await expect(page.getByText('No risks match these filters')).toBeVisible();
   await page.getByRole('button', { name: 'Clear filters' }).first().click();
-  await expect(page.getByText('Showing 1–20 of 40 risks')).toBeVisible();
+  await expect(page.getByText(`Showing 1–20 of ${total} risks`)).toBeVisible();
 
   await page.getByRole('button', { name: /^Score/ }).click();
   await expect(page.getByRole('columnheader', { name: /^Score/ })).toHaveAttribute('aria-sort', 'ascending');

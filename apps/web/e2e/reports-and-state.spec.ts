@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, ready } from './helpers';
+import { choosePerson, open, ready } from './helpers';
 
 type Captured = { name: string; text: string };
 type W = { __csv: Captured[]; __print: { single: boolean; active: string[] } | null };
@@ -86,46 +86,56 @@ test('print styles hide navigation and chrome', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Export CSV' }).first()).toBeHidden();
 });
 
-test('changes survive a reload, and Reset restores the sample data', async ({ page }) => {
+test('changes are stored on the server, so they survive a reload and are not kept in the browser', async ({ page }) => {
   await open(page, '/risks/new');
   await page.getByLabel('Title').fill('Persistence check risk');
   await page.getByLabel('Description').fill('Created by the end-to-end test.');
   await page.getByLabel('Category').selectOption('Strategic');
   await page.getByLabel('Department').selectOption({ label: 'Sales' });
-  await page.getByLabel('Owner').selectOption({ index: 1 });
+  await choosePerson(page, 'Owner', 'Ananya');
   await page.getByRole('button', { name: 'Register risk' }).click();
-  await expect(page).toHaveURL(/RSK-0041/);
+  await expect(page).toHaveURL(/\/risks\/RSK-\d{4}/);
+  const url = page.url();
 
+  await page.evaluate(() => localStorage.clear()); // nothing the app needs lives here
+  await page.goto(url);
+  await ready(page);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Persistence check risk');
   await open(page, '/risks');
-  await expect(page.getByText(/of 41 risks/)).toBeVisible();
-  await page.reload();
-  await ready(page);
-  await expect(page.getByText(/of 41 risks/)).toBeVisible();
-
-  await page.getByRole('button', { name: /Reset sample data/ }).click();
-  await page.getByRole('button', { name: /Click again to reset/ }).click();
-  await ready(page);
-  await expect(page.getByText(/of 40 risks/)).toBeVisible();
+  await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Persistence check');
+  await expect(page.locator('tbody tr.row-link')).toHaveCount(1);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k !== 'aravalli:theme' && k !== 'aravalli:session'))).toEqual([]);
 });
 
-test('saved data from an older version of the sample dataset is discarded, not shown', async ({ page }) => {
-  await open(page, '/risks'); // first visit writes the current saved state
-  const key = 'aravalli:state';
-  expect(await page.evaluate((k) => localStorage.getItem(k) !== null, key)).toBe(true);
-  // pretend an earlier release saved a tiny dataset under the same key
-  await page.evaluate((k) => {
-    const saved = JSON.parse(localStorage.getItem(k) ?? '{}');
-    localStorage.setItem(k, JSON.stringify({ ...saved, fingerprint: 'old-sample-data', ds: { ...saved.ds, risks: [] } }));
-  }, key);
-  await page.reload();
-  await ready(page);
-  await expect(page.getByText(/of 40 risks/)).toBeVisible();
+test('a failed request shows an error state with a working retry', async ({ page }) => {
+  let fail = true;
+  await page.route('**/api/reports/overview', (route) => (fail ? route.abort() : route.continue()));
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText('could not be loaded');
+  fail = false;
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Overview');
+  await expect(page.getByText('Open risks').first()).toBeVisible();
 });
 
-test('corrupt saved data does not break the app', async ({ page }) => {
+test('a stale or corrupt saved session is ignored instead of breaking the app', async ({ page }) => {
   await open(page, '/risks');
-  await page.evaluate(() => localStorage.setItem('aravalli:state', '{not json'));
+  await page.evaluate(() => localStorage.setItem('aravalli:session', JSON.stringify({ organisationId: 9999, actorId: 9999 })));
   await page.reload();
   await ready(page);
-  await expect(page.getByText(/of 40 risks/)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Risk Register');
+  await page.evaluate(() => localStorage.setItem('aravalli:session', '{not json'));
+  await page.reload();
+  await ready(page);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Risk Register');
+});
+
+test('when the API is down the app says so and can retry', async ({ page }) => {
+  let down = true;
+  await page.route('**/api/organisations', (route) => (down ? route.abort() : route.continue()));
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText("can't load");
+  down = false;
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Overview');
 });

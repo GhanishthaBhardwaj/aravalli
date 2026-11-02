@@ -11,6 +11,8 @@ export interface RiskFilters {
   bands?: string[];
   department_id?: number;
   owner_id?: number;
+  likelihood?: number;
+  impact?: number;
   /** true: only risks that are not Closed. */
   open?: boolean;
 }
@@ -43,6 +45,8 @@ function where(organisationId: number, f: RiskFilters) {
   if (f.bands?.length) { w.push(`v.severity_band IN (${f.bands.map(() => '?').join(',')})`); p.push(...f.bands); }
   if (f.department_id) { w.push('v.department_id = ?'); p.push(f.department_id); }
   if (f.owner_id) { w.push('v.owner_employee_id = ?'); p.push(f.owner_id); }
+  if (f.likelihood) { w.push('v.likelihood = ?'); p.push(f.likelihood); }
+  if (f.impact) { w.push('v.impact = ?'); p.push(f.impact); }
   if (f.open) w.push("v.status <> 'Closed'");
   return { sql: w.join(' AND '), params: p };
 }

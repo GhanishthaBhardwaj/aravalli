@@ -1,9 +1,9 @@
 import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { bandFor, type Employee, type RiskAssessment } from '@aravalli/shared';
+import { bandFor, type RiskAssessment } from '@aravalli/shared';
 import { ScoreBadge } from './ScoreBadge';
 import { Table, type Column } from '../ui/Table';
 import { BAND_VAR } from '../ui/Badge';
-import { PersonName } from '../ui/Avatar';
+import { NameChip } from '../ui/Avatar';
 import { reducedMotion } from '../ui/CountUp';
 import { tooltipStyle } from '../charts/BandBarChart';
 import { fmtDate } from '../../app/format';
@@ -51,13 +51,15 @@ export function ScoreChart({ assessments }: { assessments: RiskAssessment[] }) {
 }
 
 /** Newest first. */
-export function AssessmentTable({ assessments, employees }: { assessments: RiskAssessment[]; employees: Employee[] }) {
-  const cols: Column<RiskAssessment>[] = [
+type Row = RiskAssessment & { assessed_by_name: string };
+
+export function AssessmentTable({ assessments }: { assessments: Row[] }) {
+  const cols: Column<Row>[] = [
     { key: 'date', header: 'Date', render: (a) => <span className="num whitespace-nowrap text-[13px]">{a.assessment_date}</span>, sort: (a) => a.assessment_date },
     { key: 'l', header: 'Likelihood', align: 'right', render: (a) => <span className="num">{a.likelihood}</span> },
     { key: 'i', header: 'Impact', align: 'right', render: (a) => <span className="num">{a.impact}</span> },
     { key: 's', header: 'Score', render: (a) => <ScoreBadge score={a.risk_score} band={bandFor(a.risk_score)} /> },
-    { key: 'by', header: 'Assessed by', hideBelow: 'md', render: (a) => <PersonName person={employees.find((e) => e.employee_id === a.assessed_by)} /> },
+    { key: 'by', header: 'Assessed by', hideBelow: 'md', render: (a) => <NameChip name={a.assessed_by_name} /> },
     { key: 'n', header: 'Notes', hideBelow: 'md', render: (a) => <span className="block max-w-[34ch] truncate text-muted" title={a.mitigation_notes ?? ''}>{a.mitigation_notes ?? '—'}</span> },
   ];
   return <Table rows={[...assessments].reverse()} columns={cols} rowKey={(a) => a.assessment_id} caption="Assessment history, newest first" />;

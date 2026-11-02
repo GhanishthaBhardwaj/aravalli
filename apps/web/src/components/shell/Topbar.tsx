@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bars3Icon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
-import { useData } from '../../app/providers';
+import { useSession } from '../../app/providers';
+import { api } from '../../api/client';
 import { Avatar } from '../ui/Avatar';
 import { ThemeToggle } from '../ui/theme';
 
@@ -25,21 +26,34 @@ function crumbsFor(path: string): Crumb[] {
   return [{ label: 'Not found' }];
 }
 
+interface SearchHit { code: string; title: string; to: string }
+
 function GlobalSearch() {
-  const { ds } = useData();
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
-  const results = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (t.length < 2) return [];
-    const hit = (code: string, title: string) => code.toLowerCase().includes(t) || title.toLowerCase().includes(t);
-    return [
-      ...ds.risks.filter((r) => hit(r.risk_code, r.title)).map((r) => ({ code: r.risk_code, title: r.title, to: `/risks/${r.risk_code}` })),
-      ...ds.incidents.filter((i) => hit(i.incident_code, i.title)).map((i) => ({ code: i.incident_code, title: i.title, to: `/incidents/${i.incident_code}` })),
-    ].slice(0, 8);
-  }, [q, ds]);
+  const [results, setResults] = useState<SearchHit[]>([]);
+
+  // Searching happens on the server (a register can hold tens of thousands of records), a moment after typing stops.
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) { setResults([]); return; }
+    const controller = new AbortController();
+    const t = setTimeout(() => {
+      Promise.all([
+        api.risks({ q: term, limit: 4, sort: 'code' }, controller.signal),
+        api.incidents({ q: term, limit: 4, sort: 'reported_at', order: 'desc' }, controller.signal),
+      ]).then(
+        ([r, i]) => setResults([
+          ...r.data.map((x) => ({ code: x.risk_code, title: x.title, to: `/risks/${x.risk_code}` })),
+          ...i.data.map((x) => ({ code: x.incident_code, title: x.title, to: `/incidents/${x.incident_code}` })),
+        ]),
+        () => undefined,
+      );
+    }, 200);
+    return () => { clearTimeout(t); controller.abort(); };
+  }, [q]);
 
   const go = (to: string) => { nav(to); setQ(''); setOpen(false); };
 
@@ -88,7 +102,7 @@ function GlobalSearch() {
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { pathname } = useLocation();
-  const { ds, actor, setActorId } = useData();
+  const { organisations, organisation, setOrganisationId, people, actor, setActorId } = useSession();
   const crumbs = crumbsFor(pathname);
   return (
     <header className="topbar relative z-20 border-b border-line bg-bg px-4 py-3 md:sticky md:top-0 md:px-10">
@@ -114,6 +128,14 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <GlobalSearch />
         <div className="order-2 flex items-center gap-3 md:order-none">
           <div className="hidden md:block"><ThemeToggle /></div>
+          {organisations.length > 1 && (
+            <>
+              <label htmlFor="organisation" className="sr-only">Organisation</label>
+              <select id="organisation" className="control w-auto max-w-[200px]" value={organisation.organisation_id} onChange={(e) => setOrganisationId(Number(e.target.value))}>
+                {organisations.map((o) => <option key={o.organisation_id} value={o.organisation_id}>{o.name}</option>)}
+              </select>
+            </>
+          )}
           <label htmlFor="acting-as" className="sr-only">Acting as</label>
           <select
             id="acting-as"
@@ -121,7 +143,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             value={actor.employee_id}
             onChange={(e) => setActorId(Number(e.target.value))}
           >
-            {ds.employees.filter((e) => e.is_active).map((e) => (
+            {people.map((e) => (
               <option key={e.employee_id} value={e.employee_id}>{e.first_name} {e.last_name} · {e.role}</option>
             ))}
           </select>

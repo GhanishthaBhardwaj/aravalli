@@ -1,15 +1,19 @@
 import { expect, test } from '@playwright/test';
-import { open, rowCount } from './helpers';
+import { open, ready, rowCount } from './helpers';
 
 test('Overview attention banner links open the right filtered registers', async ({ page }) => {
   await open(page, '/');
   await page.getByRole('link', { name: 'Review Critical risks' }).click();
   await expect(page).toHaveURL(/band=Critical/);
-  await expect(page.locator('tbody tr.row-link')).toHaveCount(4);
+  await ready(page);
+  expect(await rowCount(page)).toBeGreaterThan(0);
+  for (const row of await page.locator('tbody tr.row-link').all()) await expect(row).toContainText('Critical');
   await open(page, '/');
   await page.getByRole('link', { name: 'Assign incidents' }).click();
   await expect(page).toHaveURL(/assignee=none/);
-  await expect(page.locator('tbody tr.row-link')).toHaveCount(3);
+  await ready(page);
+  expect(await rowCount(page)).toBeGreaterThan(0);
+  for (const row of await page.locator('tbody tr.row-link').all()) await expect(row).toContainText('Unassigned');
 });
 
 test('People and Departments counts link to registers with exactly that many rows', async ({ page }) => {

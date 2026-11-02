@@ -11,9 +11,16 @@ export async function actAs(page: Page, name: string) {
 /** The newest toast message. */
 export const toast = (page: Page) => page.getByTestId('toast').last();
 
-/** Wait until the page has finished its simulated loading state. */
+/** Wait until the page, and any table on it, has finished loading from the API. */
 export async function ready(page: Page) {
   await expect(page.getByRole('status', { name: 'Loading' })).toHaveCount(0);
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+}
+
+/** Search for a person in a people picker (owner, assignee) and choose them. */
+export async function choosePerson(page: Page, label: string, search: string) {
+  await page.getByLabel(label).fill(search);
+  await page.getByRole('listbox').getByRole('option').filter({ hasText: search }).first().click();
 }
 
 export async function open(page: Page, path: string) {
