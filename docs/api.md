@@ -30,15 +30,15 @@ reported or hold) and answer **404** for anything outside it, exactly as for ano
 
 **Sessions.** Access token: 15-minute JWT (HS256), kept in memory by the web app. Refresh token: random, stored hashed, delivered only
 as an httpOnly, SameSite=Strict, Secure cookie scoped to `/api/auth`, rotated on every use. Using an already-used refresh token
-revokes the whole login (all tokens with that `family_id`). Reset, verification and invitation links are random, hashed, single-use and expire.
+revokes the whole login (all tokens with that `family_id`). Nothing in the product sends email: an Org Admin creates people and sets passwords.
 
 ## Auth and user-management endpoints
 
 | | |
 | --- | --- |
-| Public | `POST /auth/signup`, `/auth/login` (rate limited), `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/invitations/lookup`, `/auth/invitations/accept`, `GET /auth/demo-accounts`, `POST /auth/demo-login` (the last two exist only when `DEMO_LOGINS=true`) |
-| Signed in | `GET /auth/me`, `POST /auth/resend-verification` |
-| Org Admin (`user.manage`) | `GET /users`, `PATCH /users/:id` (role, department, deactivate; an organisation keeps at least one active Org Admin), `GET`/`POST /invitations`, `DELETE /invitations/:id` |
+| Public | `POST /auth/signup`, `/auth/login` (rate limited), `/auth/refresh`, `/auth/logout`, `GET /auth/demo-accounts`, `POST /auth/demo-login` (the last two exist only when `DEMO_LOGINS=true`) |
+| Signed in | `GET /auth/me` |
+| Org Admin (`user.manage`) | `GET /users`, `POST /users` (add a person with a first password), `PATCH /users/:id` (role, department, deactivate; an organisation keeps at least one active Org Admin), `POST /users/:id/password` |
 
 ## Endpoints
 

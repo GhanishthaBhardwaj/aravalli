@@ -224,8 +224,8 @@ export async function ensureDemoUsers(pool: Pool, setup: OrgSetup, mainDepartmen
     const e = (await one<{ email: string }>(pool, 'SELECT email FROM employee WHERE employee_id = ?', [m.employee_id]))!;
     const exists = await one(pool, 'SELECT 1 AS x FROM user_account WHERE employee_id = ?', [m.employee_id]);
     if (exists) continue;
-    await run(pool, `INSERT INTO user_account (organisation_id, employee_id, email, password_hash, email_verified_at, is_demo, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)`,
-      [setup.organisationId, m.employee_id, e.email, await unusablePassword(), now, now]);
+    await run(pool, `INSERT INTO user_account (organisation_id, employee_id, email, password_hash, is_demo, created_at) VALUES (?, ?, ?, ?, 1, ?)`,
+      [setup.organisationId, m.employee_id, e.email, await unusablePassword(), now]);
     created++;
   }
   return created;

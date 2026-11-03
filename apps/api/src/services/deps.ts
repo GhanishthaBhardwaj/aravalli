@@ -1,7 +1,6 @@
 import type { Clock, Employee } from '@aravalli/shared';
 import type { Pool } from '../core/db';
 import { AppError } from '../core/errors';
-import type { Mailer } from '../auth/mailer';
 import type { AuthConfig } from '../core/config';
 import * as directory from '../repositories/directory';
 
@@ -10,7 +9,6 @@ export interface Deps {
   pool: Pool;
   clock: Clock;
   auth: AuthConfig;
-  mailer: Mailer;
   /** Milliseconds since the epoch. Injected so tests can move time forward to check expiry. */
   nowMs: () => number;
 }

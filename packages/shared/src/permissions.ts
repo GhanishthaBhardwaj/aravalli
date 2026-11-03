@@ -96,7 +96,6 @@ export const canClose = (actor: Pick<Employee, 'role'>): Permit =>
 export interface SessionUser {
   user_id: number;
   email: string;
-  email_verified: boolean;
   is_demo: boolean;
   organisation_id: number;
   organisation_name: string;

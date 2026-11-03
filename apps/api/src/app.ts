@@ -3,7 +3,6 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import type { Clock } from '@aravalli/shared';
-import { createMailer, type Mailer } from './auth/mailer';
 import { authenticate } from './core/context';
 import type { AuthConfig } from './core/config';
 import { one, type Pool } from './core/db';
@@ -15,17 +14,15 @@ export interface AppOptions {
   pool: Pool;
   clock: Clock;
   auth: AuthConfig;
-  /** Defaults to a mailer built from the auth config. Tests pass their own to read what was sent. */
-  mailer?: Mailer;
   /** Milliseconds since the epoch; tests move it to check expiry. */
   nowMs?: () => number;
 }
 
-export function createApp({ pool, clock, auth, mailer = createMailer(auth.mail), nowMs = Date.now }: AppOptions): Express {
+export function createApp({ pool, clock, auth, nowMs = Date.now }: AppOptions): Express {
   const app = express();
   app.disable('x-powered-by');
 
-  const registry = buildRegistry({ pool, clock, auth, mailer, nowMs }, authenticate(pool, auth.jwtSecret), createLimiters(auth.rateLimit));
+  const registry = buildRegistry({ pool, clock, auth, nowMs }, authenticate(pool, auth.jwtSecret), createLimiters(auth.rateLimit));
   const spec = registry.openapi({
     title: 'Aravalli API',
     version: '3.0.0',

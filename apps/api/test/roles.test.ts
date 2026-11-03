@@ -193,8 +193,12 @@ describe('reports, people, departments and user management', () => {
 
   it('user management: Org Admin only', async () => {
     await matrix('GET /users', E(200, 403, 403, 403, 403), (w) => send(w, 'get', '/api/users'));
-    await matrix('GET /invitations', E(200, 403, 403, 403, 403), (w) => send(w, 'get', '/api/invitations'));
-    await matrix('POST /invitations', E(201, 403, 403, 403, 403), (w) => send(w, 'post', '/api/invitations', { email: `${w}-${Date.now()}@roles.example`, role: 'Employee', department_id: deptIn }));
+    await matrix('POST /users', E(201, 403, 403, 403, 403), (w) => send(w, 'post', '/api/users', { first_name: 'New', last_name: w, email: `${w}-${Date.now()}@roles.example`, role: 'Employee', department_id: deptIn, job_title: '', password: 'Correct-horse-42' }));
+    await matrix('POST /users/:id/password', E(200, 403, 403, 403, 403), async (w) => {
+      // a real (non-demo) person to set the password for
+      const made = await send('admin', 'post', '/api/users', { first_name: 'Pw', last_name: w, email: `pw-${w}-${Date.now()}@roles.example`, role: 'Employee', department_id: deptIn, job_title: '', password: 'Correct-horse-42' });
+      return send(w, 'post', `/api/users/${made.body.data.user_id}/password`, { password: 'Correct-horse-42' });
+    });
     await matrix('PATCH /users/:id', E(200, 403, 403, 403, 403), (w) => send(w, 'patch', `/api/users/${t.a.users.employee}`, { role: 'Employee' }));
   });
 

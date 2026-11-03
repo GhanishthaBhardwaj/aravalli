@@ -10,7 +10,7 @@ const pool = createPool(config, 2);
 for (const email of ['neha.kapoor', 'rajesh.khanna', 'arjun.menon', 'sandeep.joshi', 'pooja.nair']) {
   const e = await one<{ employee_id: number; organisation_id: number; email: string }>(pool, 'SELECT employee_id, organisation_id, email FROM employee WHERE email LIKE ?', [`${email}@%`]);
   if (!e) throw new Error(`No sample employee ${email}`);
-  await run(pool, 'INSERT INTO user_account (organisation_id, employee_id, email, password_hash, email_verified_at, is_demo) VALUES (?, ?, ?, ?, NOW(), 1)',
+  await run(pool, 'INSERT INTO user_account (organisation_id, employee_id, email, password_hash, is_demo) VALUES (?, ?, ?, ?, 1)',
     [e.organisation_id, e.employee_id, e.email, await unusablePassword()]);
 }
 await pool.end();

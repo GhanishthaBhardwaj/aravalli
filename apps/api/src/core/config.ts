@@ -12,15 +12,10 @@ export interface AuthConfig {
   refreshTtlDays: number;
   /** The refresh cookie carries the Secure flag unless this is switched off (never in production). */
   cookieSecure: boolean;
-  /** Where links in emails point (the web app). */
-  appUrl: string;
   /** Demo login buttons: only on when DEMO_LOGINS=true. */
   demoLogins: boolean;
-  /** 'console' prints emails to the server log; 'smtp' sends them through SMTP_URL. */
-  mail: { mode: 'console' | 'smtp'; smtpUrl: string | null; from: string };
-  /** Attempts per window per address for login and for password-reset endpoints. */
-  rateLimit: { windowMs: number; loginMax: number; resetMax: number };
-  invitationTtlDays: number;
+  /** Attempts per window per address for login (per address and per account) and for sign-up. */
+  rateLimit: { windowMs: number; loginMax: number; signupMax: number };
 }
 
 export interface AppConfig {
@@ -48,20 +43,14 @@ export function readAuthConfig(env: Record<string, string | undefined>): AuthCon
   const secret = env.JWT_SECRET;
   if (production && (!secret || secret.length < 32)) throw new Error('JWT_SECRET (at least 32 characters) is required in production.');
   if (secret !== undefined && secret !== '' && secret.length < 32) throw new Error('JWT_SECRET must be at least 32 characters.');
-  const mode = env.MAIL_MODE ?? (env.SMTP_URL ? 'smtp' : 'console');
-  if (mode !== 'console' && mode !== 'smtp') throw new Error('MAIL_MODE must be "console" or "smtp".');
-  if (mode === 'smtp' && !env.SMTP_URL) throw new Error('MAIL_MODE=smtp needs SMTP_URL.');
   if (production && env.DEMO_LOGINS === 'true') console.warn('WARNING: DEMO_LOGINS=true in production lets anyone sign in as a demo user.');
   return {
     jwtSecret: secret || randomBytes(32).toString('hex'),
     accessTtlSeconds: int(env.ACCESS_TOKEN_SECONDS, 900, 'ACCESS_TOKEN_SECONDS'),
     refreshTtlDays: int(env.REFRESH_TOKEN_DAYS, 30, 'REFRESH_TOKEN_DAYS'),
     cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE !== 'false' : true,
-    appUrl: (env.APP_URL ?? 'http://localhost:5173').replace(/\/$/, ''),
     demoLogins: env.DEMO_LOGINS === 'true',
-    mail: { mode, smtpUrl: env.SMTP_URL ?? null, from: env.MAIL_FROM ?? 'Aravalli <no-reply@aravalli.example>' },
-    rateLimit: { windowMs: int(env.RATE_LIMIT_WINDOW_SECONDS, 900, 'RATE_LIMIT_WINDOW_SECONDS') * 1000, loginMax: int(env.RATE_LIMIT_LOGIN, 10, 'RATE_LIMIT_LOGIN'), resetMax: int(env.RATE_LIMIT_RESET, 5, 'RATE_LIMIT_RESET') },
-    invitationTtlDays: int(env.INVITATION_DAYS, 7, 'INVITATION_DAYS'),
+    rateLimit: { windowMs: int(env.RATE_LIMIT_WINDOW_SECONDS, 900, 'RATE_LIMIT_WINDOW_SECONDS') * 1000, loginMax: int(env.RATE_LIMIT_LOGIN, 10, 'RATE_LIMIT_LOGIN'), signupMax: int(env.RATE_LIMIT_SIGNUP, 10, 'RATE_LIMIT_SIGNUP') },
   };
 }
 

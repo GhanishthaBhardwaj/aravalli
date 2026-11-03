@@ -4,11 +4,11 @@ Enterprise risk and incident management for companies: register risks with an ac
 (likelihood × impact, with full history), report incidents, follow them to resolution through an append-only log, and see where
 the organisation stands.
 
-Aravalli is a **multi-tenant SaaS product**: a company signs up, invites its people, and keeps its own risks and incidents,
+Aravalli is a **multi-tenant SaaS product**: a company signs up, its admin adds its people, and keeps its own risks and incidents,
 completely separate from every other company. The plan is in [`PLAN.md`](PLAN.md).
 
-**Where it stands (end of Phase 3):** a React web app on an Express + TypeScript API on MySQL 8, with sign-up, login, invitations,
-five server-enforced roles, per-role home screens, a public landing page, and two demonstration organisations filled with
+**Where it stands (end of Phase 3):** a React web app on an Express + TypeScript API on MySQL 8, with sign-up, login,
+five server-enforced roles, per-role home screens, a plain public landing page, and two demonstration organisations filled with
 **real public data** (see below). The server owns every rule (scores, lifecycles, validation, roles, record codes, tenancy); the
 browser keeps no business data and no token in storage. API documentation is at `/api/docs`.
 
@@ -28,8 +28,8 @@ npm run dev                 # web http://localhost:5173, API http://localhost:30
 ```
 
 With `DEMO_LOGINS=true` in `.env` (the default in `.env.example`) the sign-in page shows a button per role for each
-demonstration organisation. **Never turn that on for a real deployment.** Email (verification, password reset, invitations) is
-printed in the API terminal unless you set `SMTP_URL`.
+demonstration organisation. **Never turn that on for a real deployment.** Nothing in the product sends email: an Org Admin adds
+people on the Users screen (name, email, role, department, first password) and can set a new password for them.
 
 ## Roles and permissions
 
@@ -39,7 +39,7 @@ role against every action.
 
 | Role | Can do | Sees |
 | --- | --- | --- |
-| **Org Admin** | Everything in their organisation, including users and invitations | Everything in their organisation |
+| **Org Admin** | Everything in their organisation, including adding people and setting passwords | Everything in their organisation |
 | **Risk Officer** | All risks and incidents (register, assess, change status, assign, link, update). No user management | Everything except user management |
 | **Department Head** | Act on risks and incidents of **their own department** only; report incidents; assign only within their department | Their own department |
 | **Auditor** | Nothing: read-only | Everything in their organisation, including reports |
@@ -123,8 +123,8 @@ docs/             API, schema, performance, bug list, manual test checklist, int
 ## Security notes
 
 Argon2id passwords; 15-minute JWT access tokens held in memory only; rotating refresh tokens in an httpOnly, SameSite=Strict, Secure
-cookie, stored hashed, with reuse detection (a replayed token revokes the whole login); single-use expiring reset, verification and
-invitation links (hashed); rate limits on login and reset; helmet headers; parameterised SQL only; the organisation always comes from
+cookie, stored hashed, with reuse detection (a replayed token revokes the whole login); passwords are set by the Org Admin (no
+email links to steal); rate limits on login and sign-up; helmet headers; parameterised SQL only; the organisation always comes from
 the session. Limits: access is checked per request in the database, so a deactivated user is out at once; there is no 2FA, no
 account lockout beyond rate limiting, and the in-memory rate limiter resets when the server restarts.
 

@@ -14,7 +14,7 @@ afterAll(async () => {
   await t.pool.end();
 });
 
-interface Org { key: 'a' | 'b'; organisationId: number; riskId: number; riskCode: string; riskTitle: string; incidentId: number; incidentCode: string; incidentTitle: string; employeeId: number; departmentId: number; userId: number; invitationId: number }
+interface Org { key: 'a' | 'b'; organisationId: number; riskId: number; riskCode: string; riskTitle: string; incidentId: number; incidentCode: string; incidentTitle: string; employeeId: number; departmentId: number; userId: number }
 
 /** The ids of one organisation's records, found by the test with SQL (the attacker is told them, as a determined one could guess). */
 async function describeOrg(key: 'a' | 'b'): Promise<Org> {
@@ -22,12 +22,10 @@ async function describeOrg(key: 'a' | 'b'): Promise<Org> {
   const q = async <T>(sql: string) => (await one<T>(t.pool, sql, [o.organisationId]))!;
   const risk = await q<{ risk_id: number; risk_code: string; title: string }>('SELECT risk_id, risk_code, title FROM risk WHERE organisation_id = ? ORDER BY risk_id LIMIT 1');
   const inc = await q<{ incident_id: number; incident_code: string; title: string }>('SELECT incident_id, incident_code, title FROM incident WHERE organisation_id = ? ORDER BY incident_id LIMIT 1');
-  const sent = await request(t.app).post('/api/invitations').set(as('admin', key)).send({ email: `invitee-${key}-${Date.now()}@tenancy.example`, role: 'Employee', department_id: o.departmentId });
-  expect(sent.status).toBe(201);
   return {
     key, organisationId: o.organisationId, riskId: risk.risk_id, riskCode: risk.risk_code, riskTitle: risk.title,
     incidentId: inc.incident_id, incidentCode: inc.incident_code, incidentTitle: inc.title,
-    employeeId: o.ids.officer, departmentId: o.departmentId, userId: o.users.employee, invitationId: sent.body.data.invitation_id,
+    employeeId: o.ids.officer, departmentId: o.departmentId, userId: o.users.employee,
   };
 }
 
@@ -43,7 +41,7 @@ async function snapshot(org: Org) {
     riskRow: JSON.stringify(await rows(t.pool, 'SELECT status, updated_at FROM risk WHERE risk_id = ?', [org.riskId])),
     userRow: JSON.stringify(await rows(t.pool, 'SELECT is_active FROM user_account WHERE user_id = ?', [org.userId])),
     employeeRow: JSON.stringify(await rows(t.pool, 'SELECT role, department_id, is_active FROM employee WHERE organisation_id = ? ORDER BY employee_id', [org.organisationId])),
-    invitation: JSON.stringify(await rows(t.pool, 'SELECT revoked_at, accepted_at FROM invitation WHERE invitation_id = ?', [org.invitationId])),
+    users: JSON.stringify(await rows(t.pool, 'SELECT user_id, password_hash, is_active FROM user_account WHERE organisation_id = ? ORDER BY user_id', [org.organisationId])),
   };
 }
 
@@ -87,7 +85,7 @@ describe.each(direction)('a user of organisation %s attacks organisation %s', (a
 
   it('reads: lists, searches and reports never contain the other organisation\'s rows', async () => {
     const c = call('admin');
-    for (const path of ['/api/risks?limit=100', '/api/incidents?limit=100', '/api/employees?limit=100', '/api/departments', '/api/reports/overview', '/api/reports/heatmap', '/api/reports/risk-profile', '/api/reports/resolution', '/api/users', '/api/invitations']) {
+    for (const path of ['/api/risks?limit=100', '/api/incidents?limit=100', '/api/employees?limit=100', '/api/departments', '/api/reports/overview', '/api/reports/heatmap', '/api/reports/risk-profile', '/api/reports/resolution', '/api/users']) {
       const body = JSON.stringify((await c.get(path)).body);
       expect(body, path).not.toContain(victim.riskTitle);
       expect(body, path).not.toContain(victim.incidentTitle);
@@ -114,7 +112,7 @@ describe.each(direction)('a user of organisation %s attacks organisation %s', (a
       await c.patch(`/api/incidents/${victim.incidentId}/risk-link`, { risk_id: mine.riskId }),
       await c.patch(`/api/incidents/${victim.incidentId}/risk-link`, { risk_id: null }),
       await c.patch(`/api/users/${victim.userId}`, { role: 'Org Admin', is_active: false }),
-      await c.del(`/api/invitations/${victim.invitationId}`),
+      await c.post(`/api/users/${victim.userId}/password`, { password: 'Hijacked-password-1' }),
     ];
     expect(results.map((r) => r.status)).toEqual(Array(results.length).fill(404));
   });
@@ -135,7 +133,9 @@ describe.each(direction)('a user of organisation %s attacks organisation %s', (a
     expect((await c.post('/api/incidents', validIncident({ department_id: victim.departmentId }))).status).toBe(400);
     expect((await c.post('/api/incidents', validIncident({ ...ownIncident, assigned_to: victim.employeeId }))).status).toBe(400);
     expect((await c.post('/api/incidents', validIncident({ ...ownIncident, risk_id: victim.riskId }))).status).toBe(400);
-    expect((await c.post('/api/invitations', { email: `x-${Date.now()}@tenancy.example`, role: 'Employee', department_id: victim.departmentId })).status).toBe(400);
+    const person = { first_name: 'New', last_name: 'Person', role: 'Employee', job_title: '', password: 'Correct-horse-42' };
+    expect((await c.post('/api/users', { ...person, email: `ok-${attackerKey}-${Date.now()}@tenancy.example`, department_id: mine.departmentId })).status).toBe(201); // control
+    expect((await c.post('/api/users', { ...person, email: `x-${attackerKey}-${Date.now()}@tenancy.example`, department_id: victim.departmentId })).status).toBe(400);
   });
 
   it('cannot smuggle an organisation in through the body, the query or a header', async () => {

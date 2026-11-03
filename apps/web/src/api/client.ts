@@ -122,13 +122,8 @@ export type ListParams = { limit?: number; offset?: number; sort?: string; order
 
 export interface UserRow {
   user_id: number; employee_id: number; email: string; first_name: string; last_name: string; role: Role; department_id: number; department_name: string;
-  is_active: boolean; is_demo: boolean; email_verified: boolean; last_login_at: string | null;
+  is_active: boolean; is_demo: boolean; last_login_at: string | null;
 }
-export interface InvitationRow {
-  invitation_id: number; email: string; role: Role; department_id: number; department_name: string; invited_by_name: string;
-  created_at: string; expires_at: string; status: 'Pending' | 'Accepted' | 'Revoked' | 'Expired';
-}
-export interface InvitationPreview { email: string; role: Role; organisation_name: string; department_name: string; invited_by_name: string; expires_at: string }
 export interface DemoAccount { user_id: number; role: Role; organisation_slug: string; organisation_name: string; first_name: string; last_name: string; job_title: string }
 
 export const auth = {
@@ -143,13 +138,6 @@ export const auth = {
     }
   },
   me: () => data(call<Single<SessionUser>>('GET', '/auth/me')),
-  forgot: (email: string) => call('POST', '/auth/forgot-password', { body: { email }, ...anon }),
-  reset: (token: string, password: string) => call('POST', '/auth/reset-password', { body: { token, password }, ...anon }),
-  verifyEmail: (token: string) => call('POST', '/auth/verify-email', { body: { token }, ...anon }),
-  resendVerification: () => call('POST', '/auth/resend-verification'),
-  lookupInvitation: (token: string) => data(call<Single<InvitationPreview>>('POST', '/auth/invitations/lookup', { body: { token }, ...anon })),
-  acceptInvitation: async (body: { token: string; first_name: string; last_name: string; password: string }) =>
-    take((await call<Single<SessionBody>>('POST', '/auth/invitations/accept', { body, ...anon })).data),
   demoAccounts: async (): Promise<DemoAccount[]> => {
     try {
       return await data(call<Single<DemoAccount[]>>('GET', '/auth/demo-accounts', anon));
@@ -162,9 +150,9 @@ export const auth = {
 
   users: () => data(call<Single<UserRow[]>>('GET', '/users')),
   updateUser: (id: number, body: { role?: Role; department_id?: number; is_active?: boolean }) => data(call<Single<UserRow>>('PATCH', `/users/${id}`, { body })),
-  invitations: () => data(call<Single<InvitationRow[]>>('GET', '/invitations')),
-  invite: (body: { email: string; role: Role; department_id: number }) => data(call<Single<InvitationRow>>('POST', '/invitations', { body })),
-  revokeInvitation: (id: number) => call('DELETE', `/invitations/${id}`),
+  createUser: (body: { first_name: string; last_name: string; email: string; role: Role; department_id: number; job_title: string; password: string }) =>
+    data(call<Single<UserRow>>('POST', '/users', { body })),
+  setPassword: (id: number, password: string) => call('POST', `/users/${id}/password`, { body: { password } }),
 };
 
 export const api = {

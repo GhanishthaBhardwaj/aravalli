@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 if (existsSync(join(root, '.env'))) process.loadEnvFile(join(root, '.env'));
 const testDb = process.env.TEST_DB_NAME ?? 'aravalli_test';
 // Demo logins ON (the tests sign in through them); the cookie is not Secure because the tests run over plain http on 127.0.0.1.
-const env = { ...process.env, DB_NAME: testDb, API_PORT: process.env.E2E_API_PORT ?? '3101', DEMO_LOGINS: 'true', COOKIE_SECURE: 'false', JWT_SECRET: 'browser-test-secret-browser-test-secret', RATE_LIMIT_LOGIN: '100000', RATE_LIMIT_RESET: '100000', MAIL_MODE: 'console' };
+const env = { ...process.env, DB_NAME: testDb, API_PORT: process.env.E2E_API_PORT ?? '3101', DEMO_LOGINS: 'true', COOKIE_SECURE: 'false', JWT_SECRET: 'browser-test-secret-browser-test-secret', RATE_LIMIT_LOGIN: '100000', RATE_LIMIT_SIGNUP: '100000' };
 
 const migrate = join(root, 'apps', 'api', 'src', 'db', 'migrate.ts');
 for (const args of [['reset', '--yes'], ['up'], ['seed']]) {

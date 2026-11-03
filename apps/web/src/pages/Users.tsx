@@ -1,44 +1,48 @@
-// User management (Org Admin only; the server refuses everyone else). Change a person's role or department, deactivate them,
-// and invite new people by email with their role and department already chosen.
+// User management (Org Admin only; the server refuses everyone else). Add a person with a name, email, role, department and a
+// first password; they can sign in straight away. Change a role or department, set a new password, or deactivate someone.
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ROLES, type Role } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useSession, useToast } from '../app/providers';
 import { fmtDate } from '../app/format';
-import { auth, fieldErrors, type InvitationRow, type UserRow } from '../api/client';
-import { api } from '../api/client';
+import { api, auth, fieldErrors, type UserRow } from '../api/client';
 import { useApi } from '../api/useApi';
 import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select } from '../components/ui/fields';
 import { Card, Section } from '../components/ui/layout';
-import { EmptyState } from '../components/ui/states';
+import { Modal } from '../components/ui/Modal';
+
+const EMPTY = { first_name: '', last_name: '', email: '', job_title: '', role: 'Employee' as Role, department_id: '', password: '' };
 
 export function Users() {
   const { user } = useSession();
   const toast = useToast();
-  const users = useApi((signal) => { void signal; return auth.users(); }, []);
-  const invitations = useApi((signal) => { void signal; return auth.invitations(); }, []);
+  const users = useApi(() => auth.users(), []);
   const departments = useApi((signal) => api.departments(signal), []);
 
-  const [invite, setInvite] = useState<{ email: string; role: Role; department_id: string }>({ email: '', role: 'Employee', department_id: '' });
+  const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [busy, setBusy] = useState(false);
-  const [rowError, setRowError] = useState<string>('');
+  const [rowError, setRowError] = useState('');
+  const [pwFor, setPwFor] = useState<UserRow | null>(null);
+  const [pw, setPw] = useState('');
+  const [pwError, setPwError] = useState('');
 
   const deptOptions = (departments.data ?? []).map((d) => ({ value: String(d.department_id), label: d.name }));
-  const deptId = invite.department_id || deptOptions[0]?.value || '';
+  const deptId = form.department_id || deptOptions[0]?.value || '';
+  const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((s) => ({ ...s, [k]: e.target.value }));
 
-  const send = async (e: FormEvent) => {
+  const add = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setErrors({});
     try {
-      const sent = await auth.invite({ email: invite.email.trim(), role: invite.role, department_id: Number(deptId) });
-      toast.push(`Invitation sent to ${sent.email}`);
-      setInvite({ email: '', role: 'Employee', department_id: '' });
-      invitations.reload();
+      const made = await auth.createUser({ ...form, email: form.email.trim(), department_id: Number(deptId) });
+      toast.push(`${made.first_name} ${made.last_name} can now sign in`);
+      setForm(EMPTY);
+      users.reload();
     } catch (err) {
       setErrors(fieldErrors(err));
     } finally {
@@ -51,43 +55,50 @@ export function Users() {
     try {
       await auth.updateUser(row.user_id, patch);
       toast.push(`${row.first_name} ${row.last_name} updated`);
-      users.reload();
     } catch (err) {
       setRowError(fieldErrors(err)._form ?? 'Could not save that change.');
-      users.reload();
     }
+    users.reload();
   };
 
-  const revoke = async (row: InvitationRow) => {
+  const savePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!pwFor) return;
+    setPwError('');
     try {
-      await auth.revokeInvitation(row.invitation_id);
-      toast.push(`Invitation to ${row.email} revoked`);
-      invitations.reload();
+      await auth.setPassword(pwFor.user_id, pw);
+      toast.push(`New password set for ${pwFor.first_name} ${pwFor.last_name}`);
+      setPwFor(null);
+      setPw('');
     } catch (err) {
-      setRowError(fieldErrors(err)._form ?? 'Could not revoke that invitation.');
+      const f = fieldErrors(err);
+      setPwError(f.password ?? f._form ?? 'Could not set the password.');
     }
   };
 
   return (
-    <Page title="Users" description="Who can sign in to this organisation, what they may do, and who has been invited." loading={users.loading || departments.loading} error={users.error ?? departments.error} onRetry={users.reload}>
+    <Page title="Users" description="Who can sign in to this organisation and what they may do. Add people here: there is no email step, so give them the password yourself." loading={users.loading || departments.loading} error={users.error ?? departments.error} onRetry={users.reload}>
       {rowError && <div role="alert" className="mb-6 rounded-lg border border-fg bg-surface-2 px-4 py-3 text-[14px] font-medium">{rowError}</div>}
 
-      <Section title="Invite someone" className="mb-14">
-        <form onSubmit={send} noValidate className="grid items-start gap-x-4 md:grid-cols-[1fr_180px_200px_auto]" aria-label="Invite someone">
-          <Field label="Email" error={errors.email ?? errors._form}>
-            {(p) => <Input {...p} type="email" value={invite.email} onChange={(e) => setInvite((s) => ({ ...s, email: e.target.value }))} />}
-          </Field>
-          <Field label="Role" error={errors.role}>
-            {(p) => <Select {...p} value={invite.role} onChange={(e) => setInvite((s) => ({ ...s, role: e.target.value as Role }))} options={ROLES.map((r) => ({ value: r, label: r }))} />}
-          </Field>
-          <Field label="Department" error={errors.department_id}>
-            {(p) => <Select {...p} value={deptId} onChange={(e) => setInvite((s) => ({ ...s, department_id: e.target.value }))} options={deptOptions} />}
-          </Field>
-          <div className="pt-[28px]"><Button type="submit" variant="primary" disabled={busy || !invite.email.trim()}>{busy ? 'Sending…' : 'Send invitation'}</Button></div>
+      <Section title="Add a person" className="mb-14">
+        <form onSubmit={add} noValidate aria-label="Add a person">
+          {errors._form && <div role="alert" className="mb-4 rounded-lg border border-fg bg-surface-2 px-4 py-3 text-[14px] font-medium">{errors._form}</div>}
+          <div className="grid gap-x-4 md:grid-cols-4">
+            <Field label="First name" error={errors.first_name}>{(p) => <Input {...p} value={form.first_name} onChange={set('first_name')} />}</Field>
+            <Field label="Last name" error={errors.last_name}>{(p) => <Input {...p} value={form.last_name} onChange={set('last_name')} />}</Field>
+            <Field label="Email (their login)" error={errors.email} className="md:col-span-2">{(p) => <Input {...p} type="email" value={form.email} onChange={set('email')} />}</Field>
+          </div>
+          <div className="grid gap-x-4 md:grid-cols-4">
+            <Field label="Role" error={errors.role}>{(p) => <Select {...p} value={form.role} onChange={set('role')} options={ROLES.map((r) => ({ value: r, label: r }))} />}</Field>
+            <Field label="Department" error={errors.department_id}>{(p) => <Select {...p} value={deptId} onChange={set('department_id')} options={deptOptions} />}</Field>
+            <Field label="Job title (optional)" error={errors.job_title}>{(p) => <Input {...p} value={form.job_title} onChange={set('job_title')} />}</Field>
+            <Field label="First password" error={errors.password} hint="10+ characters, a letter and a number.">{(p) => <Input {...p} type="text" autoComplete="off" value={form.password} onChange={set('password')} />}</Field>
+          </div>
+          <Button type="submit" variant="primary" disabled={busy}>{busy ? 'Adding…' : 'Add person'}</Button>
         </form>
       </Section>
 
-      <Section title="People with a login" className="mb-14">
+      <Section title="People with a login">
         <Card className="overflow-x-auto">
           <table className="tbl" aria-label="Users">
             <thead>
@@ -98,7 +109,7 @@ export function Users() {
                 const me = u.user_id === user.user_id;
                 return (
                   <tr key={u.user_id}>
-                    <td><span className="inline-flex items-center gap-2 font-medium"><Avatar person={u} size={26} />{u.first_name} {u.last_name}{me && <span className="text-[12px] font-normal text-subtle">(you)</span>}</span></td>
+                    <td><span className="inline-flex items-center gap-2 font-medium"><Avatar person={u} size={26} />{u.first_name} {u.last_name}{me && <span className="text-[12px] font-normal text-subtle">(you)</span>}{!u.is_active && <span className="text-[12px] font-normal text-subtle">inactive</span>}</span></td>
                     <td>
                       <label className="sr-only" htmlFor={`role-${u.user_id}`}>Role for {u.first_name} {u.last_name}</label>
                       <select id={`role-${u.user_id}`} className="control h-9 w-auto" value={u.role} onChange={(e) => change(u, { role: e.target.value as Role })}>
@@ -111,10 +122,11 @@ export function Users() {
                         {(departments.data ?? []).map((d) => <option key={d.department_id} value={d.department_id}>{d.name}</option>)}
                       </select>
                     </td>
-                    <td className="text-muted">{u.email}{!u.email_verified && <span className="ml-2 text-[12px] text-subtle">unconfirmed</span>}</td>
+                    <td className="text-muted">{u.email}</td>
                     <td className="text-muted">{u.last_login_at ? fmtDate(u.last_login_at) : 'Never'}</td>
-                    <td className="right">
-                      <Button size="sm" variant="secondary" disabled={me && u.is_active} onClick={() => change(u, { is_active: !u.is_active })} aria-label={`${u.is_active ? 'Deactivate' : 'Reactivate'} ${u.first_name} ${u.last_name}`}>
+                    <td className="right whitespace-nowrap">
+                      {!u.is_demo && <Button size="sm" className="mr-2" onClick={() => { setPwFor(u); setPw(''); setPwError(''); }} aria-label={`Set password for ${u.first_name} ${u.last_name}`}>Set password</Button>}
+                      <Button size="sm" disabled={me && u.is_active} onClick={() => change(u, { is_active: !u.is_active })} aria-label={`${u.is_active ? 'Deactivate' : 'Reactivate'} ${u.first_name} ${u.last_name}`}>
                         {u.is_active ? 'Deactivate' : 'Reactivate'}
                       </Button>
                     </td>
@@ -126,29 +138,12 @@ export function Users() {
         </Card>
       </Section>
 
-      <Section title="Invitations">
-        <Card className="overflow-x-auto">
-          {(invitations.data ?? []).length === 0 ? (
-            <EmptyState title="No invitations yet" body="Invitations you send appear here until they are accepted, revoked or expire." />
-          ) : (
-            <table className="tbl" aria-label="Invitations">
-              <thead><tr><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Expires</th><th className="right"> </th></tr></thead>
-              <tbody>
-                {(invitations.data ?? []).map((i) => (
-                  <tr key={i.invitation_id}>
-                    <td className="font-medium">{i.email}</td>
-                    <td>{i.role}</td>
-                    <td>{i.department_name}</td>
-                    <td>{i.status}</td>
-                    <td className="text-muted">{fmtDate(i.expires_at)}</td>
-                    <td className="right">{i.status === 'Pending' && <Button size="sm" onClick={() => revoke(i)} aria-label={`Revoke invitation to ${i.email}`}>Revoke</Button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
-      </Section>
+      <Modal open={pwFor !== null} onClose={() => setPwFor(null)} title={pwFor ? `Set a password for ${pwFor.first_name} ${pwFor.last_name}` : ''} description="They are signed out everywhere and use this password next time.">
+        <form onSubmit={savePassword} noValidate>
+          <Field label="New password" error={pwError} hint="10+ characters, a letter and a number.">{(p) => <Input {...p} type="text" autoComplete="off" value={pw} onChange={(e) => setPw(e.target.value)} />}</Field>
+          <div className="flex justify-end gap-2"><Button onClick={() => setPwFor(null)}>Cancel</Button><Button type="submit" variant="primary">Set password</Button></div>
+        </form>
+      </Modal>
     </Page>
   );
 }

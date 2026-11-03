@@ -3,7 +3,6 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { createApp } from '../src/app';
 import { hashPassword, signAccessToken } from '../src/auth/crypto';
-import { createMailer, type Mailer } from '../src/auth/mailer';
 import { loadEnvFile, readAuthConfig, type AuthConfig } from '../src/core/config';
 import { createPool, rows, run, one, type Pool } from '../src/core/db';
 import { readDbConfig } from '../src/db/config';
@@ -14,7 +13,7 @@ export const CLOCK = fixedClock('2026-10-20T17:30');
 export const TEST_PASSWORD = 'Correct-horse-42';
 
 export const testAuthConfig = (over: Partial<AuthConfig> = {}): AuthConfig => ({
-  ...readAuthConfig({ JWT_SECRET: 'test-secret-test-secret-test-secret-123', DEMO_LOGINS: 'true', COOKIE_SECURE: 'false', RATE_LIMIT_LOGIN: '1000', RATE_LIMIT_RESET: '1000', MAIL_MODE: 'console', NODE_ENV: 'test' }),
+  ...readAuthConfig({ JWT_SECRET: 'test-secret-test-secret-test-secret-123', DEMO_LOGINS: 'true', COOKIE_SECURE: 'false', RATE_LIMIT_LOGIN: '1000', RATE_LIMIT_SIGNUP: '1000', NODE_ENV: 'test' }),
   ...over,
 });
 
@@ -27,7 +26,6 @@ export interface TestContext {
   pool: Pool;
   app: Express;
   auth: AuthConfig;
-  mailer: Mailer;
   /** Move the server's clock forward (to test expiry). */
   advance(ms: number): void;
   /** The sample organisation (Aravalli Industries), one signed-in user per role. */
@@ -45,7 +43,7 @@ export async function ensureUser(pool: Pool, organisationId: number, employeeId:
   const found = await one<{ user_id: number }>(pool, 'SELECT user_id FROM user_account WHERE employee_id = ?', [employeeId]);
   if (found) return found.user_id;
   const e = (await one<{ email: string }>(pool, 'SELECT email FROM employee WHERE employee_id = ?', [employeeId]))!;
-  const r = await run(pool, 'INSERT INTO user_account (organisation_id, employee_id, email, password_hash, email_verified_at, is_demo) VALUES (?, ?, ?, ?, NOW(), ?)',
+  const r = await run(pool, 'INSERT INTO user_account (organisation_id, employee_id, email, password_hash, is_demo) VALUES (?, ?, ?, ?, ?)',
     [organisationId, employeeId, e.email, await (passwordHash ??= hashPassword(TEST_PASSWORD)), opts.demo ? 1 : 0]);
   return r.insertId;
 }
@@ -78,9 +76,8 @@ export async function startTestApp(): Promise<TestContext> {
   if (!/test/i.test(config.database)) throw new Error(`Refusing to run API tests against "${config.database}".`);
   const pool = createPool(config, 20);
   const auth = testAuthConfig();
-  const mailer = createMailer(auth.mail);
   let skew = 0;
-  const app = createApp({ pool, clock: CLOCK, auth, mailer, nowMs: () => Date.now() + skew });
+  const app = createApp({ pool, clock: CLOCK, auth, nowMs: () => Date.now() + skew });
 
   // A second, small organisation with one person in every role and one of everything.
   const existing = await rows<{ organisation_id: number }>(pool, "SELECT organisation_id FROM organisation WHERE slug = 'other-org'");
@@ -108,7 +105,7 @@ export async function startTestApp(): Promise<TestContext> {
   const incident = await first('SELECT incident_id AS id, incident_code AS code FROM incident WHERE organisation_id = ? ORDER BY incident_id LIMIT 1');
 
   return {
-    pool, app, auth, mailer, advance: (ms) => { skew += ms; },
+    pool, app, auth, advance: (ms) => { skew += ms; },
     a, b: { ...b, riskId: risk.id, riskCode: risk.code, incidentId: incident.id },
     people: a.ids,
   };

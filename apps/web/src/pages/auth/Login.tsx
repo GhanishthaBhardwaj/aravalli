@@ -68,7 +68,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [busy, setBusy] = useState(false);
-  const notice = params.get('reset') ? 'Your password was changed. Sign in with the new one.' : params.get('expired') ? 'Your session ended. Sign in again.' : '';
+  const notice = params.get('expired') ? 'Your session ended. Sign in again.' : '';
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -100,10 +100,8 @@ export function Login() {
           <Field label="Password" error={errors.password}>
             {(p) => <Input {...p} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />}
           </Field>
-          <div className="mt-2 flex items-center justify-between gap-4">
-            <Button type="submit" variant="primary" disabled={busy || !email || !password}>{busy ? 'Signing in…' : 'Sign in'}</Button>
-            <Link to="/forgot-password" className={`${authLink} text-[14px]`}>Forgot password?</Link>
-          </div>
+          <Button type="submit" variant="primary" disabled={busy || !email || !password}>{busy ? 'Signing in…' : 'Sign in'}</Button>
+          <p className="mt-4 text-[13px] text-muted">Forgot your password? Ask your organisation's Org Admin to set a new one.</p>
         </form>
       </div>
       <DemoLogins />

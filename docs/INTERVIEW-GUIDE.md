@@ -19,12 +19,12 @@ pure, tested functions, and I am turning it into a multi-tenant SaaS where every
 
 | Done | Not done yet |
 | --- | --- |
-| Express + TypeScript API on MySQL: about 40 endpoints, Zod on every request, one error format, OpenAPI at `/api/docs` | Billing: the pricing page is display only |
-| Sign-up (creates an organisation and its Org Admin), login, logout, rotating refresh tokens with reuse detection, forgot/reset password, email verification, email invitations | Two-factor authentication, single sign-on |
+| Express + TypeScript API on MySQL: about 40 endpoints, Zod on every request, one error format, OpenAPI at `/api/docs` | Billing and pricing (not in the product) |
+| Sign-up (creates an organisation and its Org Admin), login, logout, rotating refresh tokens with reuse detection, and an Org Admin who adds people (with a first password) and can set a new one | Two-factor authentication, single sign-on |
 | Five roles enforced by one permission map on the server, scoped to department / own incidents, tested role by role | Reports for Department Heads (they get a department home instead) |
 | Multi-tenancy: the organisation comes only from the session; another organisation's records answer 404 (tested in both directions through every endpoint) | A summary table for the two heaviest reports (about 150 to 240 ms at 25,000 incidents) |
-| Two demonstration organisations filled with **real public data** (24,802 ServiceNow tickets, 5,481 OSHA severe-injury records), importers that are idempotent | A real email provider (console transport in development; Nodemailer is wired for SMTP) |
-| Web app: login, sign-up, reset, invite and verify screens, Users screen, a different home per role, account menu, a public landing page with one React Three Fiber object | |
+| Two demonstration organisations filled with **real public data** (24,802 ServiceNow tickets, 5,481 OSHA severe-injury records), importers that are idempotent | Email of any kind: verification, forgot-password and invitations were removed on purpose |
+| Web app: login and sign-up screens, a Users screen where the Org Admin adds people, a different home per role, an account menu, a plain landing page with one React Three Fiber object | |
 
 Roles are enforced on the server; the browser only hides or explains. Identity comes from a verified session, not from anything the
 client can choose. Say both exactly like that.
@@ -208,9 +208,9 @@ without it. I also test the rules at their edges (the 4/5, 9/10, 16/20 band boun
 - Performance (`docs/performance.md`): the default list went from about 200 ms to about 19 ms and a deep page from 420 ms to 17 ms, by removing an `IS NULL` sort term, adding migration 0009's indexes and a deferred join. The two heavy reports are still 150 to 240 ms and are documented as such.
 
 ### Phase 3: login, tenancy, roles, landing page
-- Migration 0010: `user_account`, `refresh_token`, `user_token` (verify/reset) and `invitation`.
+- Migration 0010: `user_account` and `refresh_token`. (Email verification, password reset and invitations were built first and then removed: nothing sends email, so the Org Admin adds people and sets passwords instead.)
 - `access` is a required field on every route, so none can be added without saying who may call it. The request context is built from the verified session only; the dev headers, the "Acting as" picker and the organisation switcher are deleted.
 - The permission map lives in `packages/shared` and is used by the server to decide and by the browser to explain. Scope (department / own) is applied in the SQL of the lists and re-checked on single records; out-of-scope answers 404.
-- Web: one API client holds the access token in memory and does a single shared refresh on a 401; sign-in, sign-up, forgot/reset, accept-invite, verify screens; Users screen; role-specific homes; account menu; demo login buttons behind `DEMO_LOGINS`.
-- Landing page: sticky navbar, hero with one React Three Fiber object (a 5x5 heat map as tiles whose height is the score, critical ones orange, floating and following the pointer, still with reduced motion, plain HTML fallback without WebGL), a real dashboard screenshot that tilts and straightens on scroll, an industries strip without fake logos, a bento grid, a testimonial clearly marked as a placeholder, display-only pricing with a monthly/yearly toggle, a FAQ, and a footer that credits the data.
+- Web: one API client holds the access token in memory and does a single shared refresh on a 401; sign-in and sign-up screens; Users screen (add a person, set a password, change a role, deactivate); role-specific homes; account menu; demo login buttons behind `DEMO_LOGINS`.
+- Landing page, deliberately plain: navbar, hero with one React Three Fiber object (a 5x5 heat map whose tile height is the score; still with reduced motion; HTML fallback without WebGL), a real dashboard screenshot that tilts and straightens on scroll, a four-line description, the role table, and the data credits. Pricing, testimonial, FAQ and a feature grid were removed because they were decoration, not information.
 - Bugs found while building: a hash-based "random" choice used a signed shift and produced a negative interval (a CHECK constraint caught it); a by-code lookup in a tenancy test legitimately returned the attacker's own record because codes repeat per organisation; the first version of the importer used `INSERT IGNORE`, which silently dropped half the rows, so it now inserts plainly and fails loudly.

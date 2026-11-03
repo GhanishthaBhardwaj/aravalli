@@ -19,8 +19,6 @@ import { Users } from '../pages/Users';
 import { NotFound } from '../pages/NotFound';
 import { Login, safeNext } from '../pages/auth/Login';
 import { Signup } from '../pages/auth/Signup';
-import { ForgotPassword, ResetPassword } from '../pages/auth/PasswordPages';
-import { AcceptInvite, VerifyEmail } from '../pages/auth/InvitePages';
 import { ErrorState, PageSkeleton, RouteErrorBoundary } from '../components/ui/states';
 
 // The landing page carries the 3D library; it is loaded only for visitors who are not signed in.
@@ -91,10 +89,6 @@ export function App() {
     <Routes>
       <Route path="/login" element={<SignedOutOnly><Login /></SignedOutOnly>} />
       <Route path="/signup" element={<SignedOutOnly><Signup /></SignedOutOnly>} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/accept-invite" element={<AcceptInvite />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="*" element={<Gate />} />
     </Routes>
   );

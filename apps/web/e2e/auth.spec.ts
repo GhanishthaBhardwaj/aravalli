@@ -1,19 +1,15 @@
 import { expect } from '@playwright/test';
-import { anonymous as test, signInAs, ready, open } from './helpers';
+import { anonymous as test, open, ready, signInAs } from './helpers';
 
-test('a visitor sees the landing page with the hero, a 3D heat map or its fallback, pricing and a clearly marked placeholder testimonial', async ({ page }) => {
+test('a visitor sees a plain landing page with the hero, the role table and the data credits, and no pricing', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('See the risk before it becomes the incident');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep your risks and incidents in one place');
   await expect(page.getByRole('link', { name: 'Start free' }).first()).toBeVisible();
   await expect(page.getByTestId('hero-visual')).toBeVisible();
-  await expect(page.getByTestId('hero-3d').or(page.getByTestId('hero-visual').locator('.grid')).first()).toBeVisible();
-  await expect(page.getByTestId('placeholder-tag')).toContainText('Placeholder');
-  // yearly pricing is the default; the toggle changes the displayed price only
-  await expect(page.getByTestId('price-Professional')).toContainText('$41');
-  await page.getByRole('radio', { name: 'Monthly' }).click();
-  await expect(page.getByTestId('price-Professional')).toContainText('$49');
-  await page.getByText('Who can see and change what?').click();
-  await expect(page.getByText('Auditors can read everything and change nothing')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Who can do what' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Auditor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'About the demo data' })).toBeVisible();
+  await expect(page.getByText(/pricing|per user|testimonial|placeholder/i)).toHaveCount(0);
 });
 
 test('the landing page respects reduced motion and still shows the product screenshot', async ({ browser }) => {
@@ -26,9 +22,17 @@ test('the landing page respects reduced motion and still shows the product scree
   await ctx.close();
 });
 
-test('protected pages send a visitor to sign in, then bring them back', async ({ page }) => {
+test('protected pages send a visitor to sign in', async ({ page }) => {
   await page.goto('/risks');
   await expect(page).toHaveURL(/\/login\?next=%2Frisks/);
+});
+
+test('the old email pages are gone', async ({ page }) => {
+  await page.goto('/forgot-password');
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await page.goto('/login');
+  await expect(page.getByText('Forgot password?')).toHaveCount(0);
+  await expect(page.getByText(/ask your organisation/i)).toBeVisible();
 });
 
 test('demo login buttons sign in as each role, the account menu shows who, and sign out ends the session', async ({ page }) => {
@@ -38,27 +42,55 @@ test('demo login buttons sign in as each role, the account menu shows who, and s
   await expect(page.getByTestId('account-menu')).toContainText('Auditor');
   await page.getByTestId('account-menu').click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('See the risk');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep your risks');
   await page.goto('/incidents');
   await expect(page).toHaveURL(/\/login/);
 });
 
-test('sign-up creates an organisation and its Org Admin, who lands on a dashboard and sees the Users page', async ({ page }) => {
-  const email = `founder${Date.now()}@browser.example`;
+test('sign-up creates an organisation and its Org Admin, who adds a person who can then sign in', async ({ page, browser }) => {
+  const stamp = Date.now();
   await page.goto('/signup');
   await page.getByLabel('Organisation name').fill('Browser Test Co');
   await page.getByLabel('First name').fill('Fay');
   await page.getByLabel('Last name').fill('Founder');
-  await page.getByLabel('Work email').fill(email);
+  await page.getByLabel('Work email').fill(`founder${stamp}@browser.example`);
   await page.getByLabel('Password').fill('short');
   await page.getByRole('button', { name: 'Create organisation' }).click();
   await expect(page.getByText('Use at least 10 characters.')).toBeVisible();
   await page.getByLabel('Password').fill('A-good-password-1');
   await page.getByRole('button', { name: 'Create organisation' }).click();
   await expect(page.getByTestId('account-menu')).toContainText('Org Admin');
-  await expect(page.getByTestId('verify-banner')).toBeVisible();
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Users' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Users');
+
+  const person = `sam${stamp}@browser.example`;
+  const form = page.getByRole('form', { name: 'Add a person' });
+  await form.getByLabel('First name').fill('Sam');
+  await form.getByLabel('Last name').fill('Auditor');
+  await form.getByLabel('Email (their login)').fill(person);
+  await form.getByLabel('Role').selectOption('Auditor');
+  await form.getByLabel('First password').fill('weak');
+  await form.getByRole('button', { name: 'Add person' }).click();
+  await expect(form.getByText('Use at least 10 characters.')).toBeVisible();
+  await form.getByLabel('First password').fill('Sams-password-77');
+  await form.getByRole('button', { name: 'Add person' }).click();
+  await expect(page.getByRole('table', { name: 'Users' }).getByRole('row', { name: /Sam Auditor/ })).toBeVisible();
+
+  // the new person signs in from a clean browser
+  const ctx = await browser.newContext();
+  const other = await ctx.newPage();
+  await other.goto('/login');
+  await other.getByLabel('Email').fill(person);
+  await other.getByLabel('Password').fill('Sams-password-77');
+  await other.getByRole('button', { name: 'Sign in' }).click();
+  await expect(other.getByTestId('account-menu')).toContainText('Auditor');
+
+  // the admin sets a new password for them
+  await page.getByRole('button', { name: 'Set password for Sam Auditor' }).click();
+  await page.getByLabel('New password').fill('Sams-new-password-88');
+  await page.getByRole('dialog').getByRole('button', { name: 'Set password' }).click();
+  await expect(page.getByTestId('toast').last()).toContainText('New password set');
+  await ctx.close();
 });
 
 test('each role gets its own home and menu', async ({ page }) => {

@@ -29,7 +29,7 @@ then `npm run db:migrate` and `npm run db:seed`).
 - [ ] As an **Employee**: the menu has only Overview, Incident Register and Report Incident. They can report an incident but cannot assign, link or close; an incident they did not report shows "not found".
 - [ ] As a **Department Head**: only their department's risks and incidents appear; no Reports or Heat Map.
 - [ ] Reload the page: you are still signed in (the session cookie), and the account menu names you.
-- [ ] Try it for real: as an Auditor, copy the access token is not possible (it lives in memory); instead sign in with Swagger (`/api/docs`, `POST /auth/login` with an Auditor you created through invitations), authorise with the token, and try `POST /risks`: the server answers 403.
+- [ ] Try it for real: in Swagger (`/api/docs`) call `POST /auth/login` as an Auditor you added, press Authorize with the token, and try `POST /risks`: the server answers 403.
 
 ## 5. Light and dark (1 min)
 - [ ] The three-way switch in the top bar (System / Light / Dark) changes the whole app and survives a reload.
@@ -45,14 +45,13 @@ then `npm run db:migrate` and `npm run db:seed`).
 Note the page address, what you clicked, and what you expected. If the page shows "could not be loaded", check that the terminal running
 `npm run dev` shows both `[api]` and `[web]` lines and no errors.
 
-## 7. Accounts, invitations and tenancy (8 min)
-- [ ] Sign out. The landing page appears: hero with a floating 5x5 heat map (it leans toward the mouse), a screenshot that straightens as you scroll, pricing with a Monthly/Yearly switch, a FAQ, and the testimonial marked "Placeholder".
+## 7. Accounts and tenancy (6 min)
+- [ ] Sign out. The landing page is plain: hero with a floating 5x5 heat map (it leans toward the mouse), a screenshot that straightens as you scroll, a short list of what is in it, the role table, and the data credits. No pricing, no testimonial.
 - [ ] With your system set to "reduce motion" the heat map and screenshot stay still.
-- [ ] **Start free**: create an organisation with a weak password (it explains why), then a good one. You land signed in as **Org Admin**, with a "Confirm your email" banner.
-- [ ] The API terminal printed the confirmation email (console transport). Open the link: "Your email address is confirmed". Open it a second time: it says the link is invalid.
-- [ ] **Users** (Org Admin only): invite a second email as **Department Head** in a department. Copy the link from the API terminal, open it in a private window, accept: you arrive as that role in that department.
-- [ ] Back as Org Admin: change that person's role, then deactivate them. In the other window the next click sends them to sign-in.
+- [ ] **Start free**: create an organisation with a weak password (it explains why), then a good one. You land signed in as **Org Admin**.
+- [ ] **Users** (Org Admin only): add a person as **Auditor**: name, email, role, department and a first password. Open a private window, sign in as that person with those details: you arrive as an Auditor.
+- [ ] Back as Org Admin: **Set password** for them; the private window is signed out and the old password no longer works. Then change their role, then deactivate them: their next click sends them to sign-in.
 - [ ] Try to demote or deactivate yourself as the only Org Admin: refused.
-- [ ] **Forgot password**: the link in the terminal works once; afterwards every other session is signed out.
-- [ ] Sign in as the Meridian Org Admin, note an incident code, then sign in as Ironbridge's and open `/incidents/<that code>` and its numeric API id: "not found" in both cases.
-- [ ] Footer of every screen of a demo organisation states the date shift and the data source.
+- [ ] The sign-in page has no "forgot password" link; it tells people to ask their Org Admin.
+- [ ] Sign in as the Meridian Org Admin, note an incident code, then sign in as Ironbridge's and open `/incidents/<that code>`: "not found".
+- [ ] The footer of every screen of a demo organisation states the date shift and the data source.

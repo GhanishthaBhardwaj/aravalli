@@ -38,20 +38,13 @@ export const makeAuthController = (d: Deps) => {
       res.clearCookie(REFRESH_COOKIE, { path: COOKIE_PATH });
       sendData(res, { ok: true });
     },
-    async forgot(_req: Request, res: Response, body: { email: string }) { await service.forgotPassword(d, body.email); sendData(res, { ok: true }); },
-    async reset(_req: Request, res: Response, body: { token: string; password: string }) { await service.resetPassword(d, body.token, body.password); sendData(res, { ok: true }); },
-    async verify(_req: Request, res: Response, body: { token: string }) { await service.verifyEmail(d, body.token); sendData(res, { ok: true }); },
-    async resend(req: Request, res: Response) { await service.resendVerification(d, req.ctx); sendData(res, { ok: true }); },
     async me(req: Request, res: Response) { sendData(res, await service.sessionUser(d, req.ctx.userId)); },
-    async lookupInvite(_req: Request, res: Response, body: { token: string }) { sendData(res, await service.lookupInvitation(d, body.token)); },
-    async acceptInvite(req: Request, res: Response, body: service.AcceptBody) { await respondWithSession(res, await service.acceptInvitation(d, body, ua(req)), 201); },
     async demoAccounts(_req: Request, res: Response) { sendData(res, await service.demoAccounts(d)); },
     async demoLogin(req: Request, res: Response, body: { organisation: string; role: Role }) { await respondWithSession(res, await service.demoLogin(d, body.organisation, body.role, ua(req))); },
 
-    async invite(req: Request, res: Response, body: service.InviteBody) { sendData(res, await service.invite(d, req.ctx, body), 201); },
-    async invitations(req: Request, res: Response) { sendData(res, await service.listInvitations(d, req.ctx)); },
-    async revokeInvitation(req: Request, res: Response) { await service.revokeInvitation(d, req.ctx, idParam(req)); sendData(res, { ok: true }); },
     async users(req: Request, res: Response) { sendData(res, await service.listUsers(d, req.ctx)); },
+    async createUser(req: Request, res: Response, body: service.NewUserBody) { sendData(res, await service.createUser(d, req.ctx, body), 201); },
     async updateUser(req: Request, res: Response, body: service.UserPatch) { sendData(res, await service.updateUser(d, req.ctx, idParam(req), body)); },
+    async setPassword(req: Request, res: Response, body: { password: string }) { await service.setUserPassword(d, req.ctx, idParam(req), body.password); sendData(res, { ok: true }); },
   };
 };
