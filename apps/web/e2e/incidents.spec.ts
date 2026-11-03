@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { choosePerson, open, ready, toast } from './helpers';
+import { expect } from '@playwright/test';
+import { choosePerson, open, ready, toast, test } from './helpers';
 
 async function reportBasic(page: import('@playwright/test').Page, title: string) {
   await open(page, '/incidents/new');

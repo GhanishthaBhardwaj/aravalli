@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { open, ready, rowCount } from './helpers';
+import { expect } from '@playwright/test';
+import { open, ready, rowCount, test } from './helpers';
 
 test('Overview attention banner links open the right filtered registers', async ({ page }) => {
   await open(page, '/');

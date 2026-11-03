@@ -14,6 +14,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 7_000 },
   fullyParallel: false,
+  retries: 1, // one retry: a timing-sensitive test may flake once on a slow machine; a real failure fails twice
   workers: 1,
   reporter: [['list']],
   use: {

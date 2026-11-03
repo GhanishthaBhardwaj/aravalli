@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { choosePerson, open, pick, rowCount, toast } from './helpers';
+import { expect } from '@playwright/test';
+import { choosePerson, open, pick, rowCount, toast, test } from './helpers';
 
 test('register risk validates, previews the score and creates a generated code and shows it as Assessed', async ({ page }) => {
   await open(page, '/risks/new');

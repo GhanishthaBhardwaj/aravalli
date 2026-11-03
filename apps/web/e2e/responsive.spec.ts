@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { open } from './helpers';
+import { expect } from '@playwright/test';
+import { open, test } from './helpers';
 
 const ROUTES = [
   '/', '/risks', '/risks/new', '/risks/heatmap', '/risks/RSK-0002', '/incidents', '/incidents/new',

@@ -15,7 +15,8 @@ import { Figure, Section } from '../components/ui/layout';
 
 const link = 'font-medium text-fg underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-fg';
 
-export function Overview() {
+/** Org Admin, Risk Officer and Auditor see the whole organisation; each gets a different line of introduction and next steps. */
+export function Overview({ variant = 'officer' }: { variant?: 'admin' | 'officer' | 'auditor' }) {
   const { clock } = useSession();
   const nav = useNavigate();
   const { data, loading, error, reload } = useApi(
@@ -46,7 +47,9 @@ export function Overview() {
       <strong className="font-semibold text-fg">{k.criticalHighRisks} open risks</strong> are rated Critical or High
       {unowned > 0 && <>, and <strong className="font-semibold text-fg">{unowned} open incidents</strong> have nobody assigned</>}.{' '}
       <Link to="/risks?band=Critical" className={link}>Review Critical risks</Link>
-      {unowned > 0 && <> or <Link to="/incidents?assignee=none" className={link}>Assign incidents</Link></>}.
+      {unowned > 0 && variant !== 'auditor' && <> or <Link to="/incidents?assignee=none" className={link}>Assign incidents</Link></>}
+      {variant === 'admin' && <> or <Link to="/users" className={link}>manage who has access</Link></>}
+      {variant === 'auditor' && <>. This is a read-only view: you can look at everything and change nothing</>}.
     </>
   );
 

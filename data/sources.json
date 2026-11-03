@@ -14,6 +14,29 @@
       "extractedFiles": [
         "incident_event_log.csv"
       ]
+    },
+    {
+      "id": "osha-severe-injury",
+      "title": "OSHA Severe Injury Reports (federal OSHA jurisdiction), January 2015 to November 2025",
+      "url": "https://www.osha.gov/severe-injury-reports",
+      "landingPage": "https://www.osha.gov/severe-injury-reports",
+      "licence": "No licence or copyright statement is given on the page (checked 2026-11-03); it says the data are updated periodically and cover federal OSHA jurisdiction only. US Department of Labor publication.",
+      "licenceUrl": "https://www.osha.gov/severe-injury-reports",
+      "file": "osha-severe-injury.csv",
+      "downloadedOn": "2026-11-03",
+      "downloadedBy": "manually, from the page above (scripted download was refused with HTTP 403)",
+      "bytes": 57403269,
+      "sha256": "406ffe7bc0758a447ad1650171b9c3f6990f901e8b73f167dad7cf60a97f13cd",
+      "rows": 105996,
+      "columnsDroppedOnImport": [
+        "Employer",
+        "Address1",
+        "Address2",
+        "City",
+        "Zip",
+        "Latitude",
+        "Longitude"
+      ]
     }
   ]
 }

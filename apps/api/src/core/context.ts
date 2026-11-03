@@ -1,21 +1,26 @@
-// THE ONE PLACE a request's organisation and actor come from.
+// THE ONE PLACE a request's organisation and actor come from: the verified session. Never the body, the URL or a header the
+// client could choose. Every repository query takes organisationId from this object and nowhere else.
 //
-// Every repository query takes organisationId from this object and nowhere else.
-//
-// DEV ONLY, until Phase 3 adds login: the organisation and the acting employee are read from two request headers
-// (X-Organisation-Id, X-Actor-Id). Anyone can send any value, so this is NOT security. Phase 3 replaces
-// `devContext` with middleware that reads them from a verified session, and nothing else has to change.
+// The access token only says WHICH USER is calling. The organisation, role and department are read from the database on every
+// request, so deactivating a user, or changing their role, takes effect on their very next request.
+import type { Employee, Permission, Role } from '@aravalli/shared';
+import { hasPermission, scopeFor, type Scope } from '@aravalli/shared';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import { verifyAccessToken } from '../auth/crypto';
+import { getSession } from '../repositories/auth';
+import { iso } from './db';
 import type { Pool } from './db';
-import { one } from './db';
 import { AppError } from './errors';
 
 export interface RequestContext {
+  userId: number;
   organisationId: number;
-  /** The employee performing the request; null for anonymous reads. */
-  actorId: number | null;
-  /** Where the values came from, so a log line or a test can tell. */
-  source: 'dev-header' | 'dev-default';
+  /** The employee row of the signed-in user. */
+  actorId: number;
+  role: Role;
+  departmentId: number;
+  actor: Employee;
+  scope: Scope;
 }
 
 declare module 'express-serve-static-core' {
@@ -24,38 +29,31 @@ declare module 'express-serve-static-core' {
   }
 }
 
-const positiveInt = (raw: unknown): number | null => {
-  if (typeof raw !== 'string' || !/^\d{1,9}$/.test(raw)) return null;
-  const n = Number(raw);
-  return n > 0 ? n : null;
-};
+const unauthorized = () => new AppError('unauthorized', 'Sign in to continue.');
 
-export function devContext(pool: Pool, defaultOrganisationId: number | null): RequestHandler {
-  let cachedDefault: number | null = defaultOrganisationId;
+export function authenticate(pool: Pool, jwtSecret: string): RequestHandler {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
-      const headerOrg = req.header('x-organisation-id');
-      let organisationId = positiveInt(headerOrg);
-      if (headerOrg !== undefined && organisationId === null) throw new AppError('validation_error', 'X-Organisation-Id must be a positive integer.');
-      const fromHeader = organisationId !== null;
-      if (organisationId === null) {
-        if (cachedDefault === null) {
-          const first = await one<{ organisation_id: number }>(pool, 'SELECT organisation_id FROM organisation ORDER BY organisation_id LIMIT 1');
-          if (!first) throw new AppError('organisation_not_found', 'There are no organisations yet. Run npm run db:seed.');
-          cachedDefault = first.organisation_id;
-        }
-        organisationId = cachedDefault;
-      }
-      const exists = await one(pool, 'SELECT 1 AS ok FROM organisation WHERE organisation_id = ?', [organisationId]);
-      if (!exists) throw new AppError('organisation_not_found', 'That organisation does not exist.');
-
-      const headerActor = req.header('x-actor-id');
-      const actorId = positiveInt(headerActor);
-      if (headerActor !== undefined && actorId === null) throw new AppError('validation_error', 'X-Actor-Id must be a positive integer.');
-      req.ctx = { organisationId, actorId, source: fromHeader ? 'dev-header' : 'dev-default' };
+      const header = req.header('authorization') ?? '';
+      const match = /^Bearer (\S+)$/.exec(header);
+      const userId = match ? verifyAccessToken(match[1]!, jwtSecret) : null;
+      if (userId === null) throw unauthorized();
+      const s = await getSession(pool, userId);
+      if (!s || !s.user_active || !s.employee_active) throw unauthorized();
+      const actor: Employee = {
+        employee_id: s.employee_id, organisation_id: s.organisation_id, employee_code: s.employee_code, department_id: s.department_id,
+        first_name: s.first_name, last_name: s.last_name, email: s.email, job_title: s.job_title, role: s.role, is_active: true, created_at: iso(s.employee_created_at),
+      };
+      req.ctx = { userId, organisationId: s.organisation_id, actorId: s.employee_id, role: s.role, departmentId: s.department_id, actor, scope: scopeFor(actor) };
       next();
     } catch (error) {
       next(error);
     }
   };
 }
+
+/** Refuses the request unless the signed-in role holds the permission. */
+export const requirePermission = (permission: Permission): RequestHandler => (req, _res, next) => {
+  if (!hasPermission(req.ctx.role, permission)) return next(new AppError('forbidden', req.ctx.role === 'Auditor' ? 'Auditors have read-only access.' : `Your role (${req.ctx.role}) is not allowed to do this.`));
+  next();
+};

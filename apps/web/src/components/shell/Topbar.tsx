@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bars3Icon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { useSession } from '../../app/providers';
 import { api } from '../../api/client';
-import { Avatar } from '../ui/Avatar';
+import { AccountMenu } from './AccountMenu';
 import { ThemeToggle } from '../ui/theme';
 
 interface Crumb { label: string; to?: string }
@@ -23,6 +23,7 @@ function crumbsFor(path: string): Crumb[] {
   if (a === 'departments') return [{ label: 'Organization' }, { label: 'Departments' }];
   if (a === 'people') return [{ label: 'Organization' }, { label: 'People' }];
   if (a === 'reports') return [{ label: 'Reports' }];
+  if (a === 'users') return [{ label: 'Organization' }, { label: 'Users' }];
   return [{ label: 'Not found' }];
 }
 
@@ -30,6 +31,7 @@ interface SearchHit { code: string; title: string; to: string }
 
 function GlobalSearch() {
   const nav = useNavigate();
+  const { can } = useSession();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
@@ -42,7 +44,7 @@ function GlobalSearch() {
     const controller = new AbortController();
     const t = setTimeout(() => {
       Promise.all([
-        api.risks({ q: term, limit: 4, sort: 'code' }, controller.signal),
+        can('risk.read') ? api.risks({ q: term, limit: 4, sort: 'code' }, controller.signal) : Promise.resolve({ data: [] as Awaited<ReturnType<typeof api.risks>>['data'] }),
         api.incidents({ q: term, limit: 4, sort: 'reported_at', order: 'desc' }, controller.signal),
       ]).then(
         ([r, i]) => setResults([
@@ -53,7 +55,7 @@ function GlobalSearch() {
       );
     }, 200);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [q]);
+  }, [q, can]);
 
   const go = (to: string) => { nav(to); setQ(''); setOpen(false); };
 
@@ -102,7 +104,6 @@ function GlobalSearch() {
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { pathname } = useLocation();
-  const { organisations, organisation, setOrganisationId, people, actor, setActorId } = useSession();
   const crumbs = crumbsFor(pathname);
   return (
     <header className="topbar relative z-20 border-b border-line bg-bg px-4 py-3 md:sticky md:top-0 md:px-10">
@@ -128,26 +129,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <GlobalSearch />
         <div className="order-2 flex items-center gap-3 md:order-none">
           <div className="hidden md:block"><ThemeToggle /></div>
-          {organisations.length > 1 && (
-            <>
-              <label htmlFor="organisation" className="sr-only">Organisation</label>
-              <select id="organisation" className="control w-auto max-w-[200px]" value={organisation.organisation_id} onChange={(e) => setOrganisationId(Number(e.target.value))}>
-                {organisations.map((o) => <option key={o.organisation_id} value={o.organisation_id}>{o.name}</option>)}
-              </select>
-            </>
-          )}
-          <label htmlFor="acting-as" className="sr-only">Acting as</label>
-          <select
-            id="acting-as"
-            className="control w-auto max-w-[230px]"
-            value={actor.employee_id}
-            onChange={(e) => setActorId(Number(e.target.value))}
-          >
-            {people.map((e) => (
-              <option key={e.employee_id} value={e.employee_id}>{e.first_name} {e.last_name} · {e.role}</option>
-            ))}
-          </select>
-          <Avatar person={actor} size={36} />
+          <AccountMenu />
         </div>
       </div>
     </header>

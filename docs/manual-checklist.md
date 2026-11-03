@@ -24,11 +24,12 @@ then `npm run db:migrate` and `npm run db:seed`).
 - [ ] Incident Register: filter by Severity, Status and Assignee, sort, page.
 - [ ] Reports: all three tabs load; **Export CSV** downloads a file; **Print** opens the print preview with only that report.
 
-## 4. Roles (2 min)
-- [ ] "Acting as" in the top bar: choose an **Auditor**. Every button that would change something is disabled, with a reason on hover.
-- [ ] Choose an **Employee**. They can report an incident but cannot register a risk, assign, link or close.
-- [ ] Reload the page: the person you chose is still selected.
-- [ ] Try it for real: as an Auditor, send a write straight to the API with Swagger (`/api/docs`, header `X-Actor-Id` set to an Auditor's id): the server answers 403.
+## 4. Roles (3 min)
+- [ ] Sign out (account menu, top right), then on the sign-in page use the demo buttons for **Ironbridge**. As an **Auditor**: every button that would change something is disabled, with a reason on hover.
+- [ ] As an **Employee**: the menu has only Overview, Incident Register and Report Incident. They can report an incident but cannot assign, link or close; an incident they did not report shows "not found".
+- [ ] As a **Department Head**: only their department's risks and incidents appear; no Reports or Heat Map.
+- [ ] Reload the page: you are still signed in (the session cookie), and the account menu names you.
+- [ ] Try it for real: as an Auditor, copy the access token is not possible (it lives in memory); instead sign in with Swagger (`/api/docs`, `POST /auth/login` with an Auditor you created through invitations), authorise with the token, and try `POST /risks`: the server answers 403.
 
 ## 5. Light and dark (1 min)
 - [ ] The three-way switch in the top bar (System / Light / Dark) changes the whole app and survives a reload.
@@ -43,3 +44,15 @@ then `npm run db:migrate` and `npm run db:seed`).
 ## If something is wrong
 Note the page address, what you clicked, and what you expected. If the page shows "could not be loaded", check that the terminal running
 `npm run dev` shows both `[api]` and `[web]` lines and no errors.
+
+## 7. Accounts, invitations and tenancy (8 min)
+- [ ] Sign out. The landing page appears: hero with a floating 5x5 heat map (it leans toward the mouse), a screenshot that straightens as you scroll, pricing with a Monthly/Yearly switch, a FAQ, and the testimonial marked "Placeholder".
+- [ ] With your system set to "reduce motion" the heat map and screenshot stay still.
+- [ ] **Start free**: create an organisation with a weak password (it explains why), then a good one. You land signed in as **Org Admin**, with a "Confirm your email" banner.
+- [ ] The API terminal printed the confirmation email (console transport). Open the link: "Your email address is confirmed". Open it a second time: it says the link is invalid.
+- [ ] **Users** (Org Admin only): invite a second email as **Department Head** in a department. Copy the link from the API terminal, open it in a private window, accept: you arrive as that role in that department.
+- [ ] Back as Org Admin: change that person's role, then deactivate them. In the other window the next click sends them to sign-in.
+- [ ] Try to demote or deactivate yourself as the only Org Admin: refused.
+- [ ] **Forgot password**: the link in the terminal works once; afterwards every other session is signed out.
+- [ ] Sign in as the Meridian Org Admin, note an incident code, then sign in as Ironbridge's and open `/incidents/<that code>` and its numeric API id: "not found" in both cases.
+- [ ] Footer of every screen of a demo organisation states the date shift and the data source.

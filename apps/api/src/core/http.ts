@@ -44,8 +44,5 @@ export const csvList = <T extends z.ZodTypeAny>(item: T) =>
 /** Booleans in a query string arrive as the text 'true' / 'false'. */
 export const queryBool = z.enum(['true', 'false']).transform((v) => v === 'true');
 
-/** The acting employee; writes need one. */
-export const requireActor = (req: Request): number => {
-  if (req.ctx.actorId === null) throw new AppError('actor_required', 'This action needs an acting employee (X-Actor-Id header).');
-  return req.ctx.actorId;
-};
+/** The signed-in employee. Every authenticated request has one. */
+export const requireActor = (req: Request): number => req.ctx.actorId;

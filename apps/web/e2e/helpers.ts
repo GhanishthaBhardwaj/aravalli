@@ -1,11 +1,36 @@
-import { expect } from '@playwright/test';
+import { expect, test as base } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-/** Switch the "Acting as" user by (part of) their name. */
-export async function actAs(page: Page, name: string) {
-  const select = page.getByLabel('Acting as');
-  const option = select.locator('option', { hasText: name }).first();
-  await select.selectOption({ value: (await option.getAttribute('value')) ?? '' });
+/** The sample organisation's people the tests use, and the role each signs in as (demo accounts made by scripts/e2e-api.mjs). */
+export const PEOPLE = {
+  'Neha Kapoor': 'Risk Officer',
+  'Rajesh Khanna': 'Department Head',
+  'Arjun Menon': 'Org Admin',
+  'Sandeep Joshi': 'Auditor',
+  'Pooja Nair': 'Employee',
+} as const;
+export type Person = keyof typeof PEOPLE;
+
+/** Signs the browser in as one of the sample people through the demo login. The refresh cookie lands in the browser context. */
+export async function signInAs(page: Page, name: Person, organisation = 'aravalli-industries') {
+  const res = await page.request.post('/api/auth/demo-login', { data: { organisation, role: PEOPLE[name] } });
+  expect(res.ok(), 'demo login').toBe(true);
+}
+
+/** Every test starts signed in as the Risk Officer, like opening the app as a normal user. Use `anonymous` for signed-out tests. */
+export const test = base.extend({
+  page: async ({ page }, provide) => {
+    await signInAs(page, 'Neha Kapoor');
+    await provide(page);
+  },
+});
+export const anonymous = base;
+
+/** Switch to another person: sign in as them and reload. */
+export async function actAs(page: Page, name: Person) {
+  await signInAs(page, name);
+  await page.reload();
+  await ready(page);
 }
 
 /** The newest toast message. */

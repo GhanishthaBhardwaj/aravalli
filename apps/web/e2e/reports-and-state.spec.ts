@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { choosePerson, open, ready } from './helpers';
+import { choosePerson, open, ready, test } from './helpers';
 
 type Captured = { name: string; text: string };
 type W = { __csv: Captured[]; __print: { single: boolean; active: string[] } | null };
@@ -104,7 +104,7 @@ test('changes are stored on the server, so they survive a reload and are not kep
   await open(page, '/risks');
   await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Persistence check');
   await expect(page.locator('tbody tr.row-link')).toHaveCount(1);
-  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k !== 'aravalli:theme' && k !== 'aravalli:session'))).toEqual([]);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k !== 'aravalli:theme'))).toEqual([]); // no business data and no token in browser storage
 });
 
 test('a failed request shows an error state with a working retry', async ({ page }) => {
@@ -118,13 +118,12 @@ test('a failed request shows an error state with a working retry', async ({ page
   await expect(page.getByText('Open risks').first()).toBeVisible();
 });
 
-test('a stale or corrupt saved session is ignored instead of breaking the app', async ({ page }) => {
+test('anything an old version left in browser storage is ignored: the session lives in the cookie', async ({ page }) => {
   await open(page, '/risks');
-  await page.evaluate(() => localStorage.setItem('aravalli:session', JSON.stringify({ organisationId: 9999, actorId: 9999 })));
-  await page.reload();
-  await ready(page);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Risk Register');
-  await page.evaluate(() => localStorage.setItem('aravalli:session', '{not json'));
+  await page.evaluate(() => {
+    localStorage.setItem('aravalli:session', JSON.stringify({ organisationId: 9999, actorId: 9999 }));
+    localStorage.setItem('aravalli:theme', '{not json');
+  });
   await page.reload();
   await ready(page);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Risk Register');
@@ -132,7 +131,7 @@ test('a stale or corrupt saved session is ignored instead of breaking the app', 
 
 test('when the API is down the app says so and can retry', async ({ page }) => {
   let down = true;
-  await page.route('**/api/organisations', (route) => (down ? route.abort() : route.continue()));
+  await page.route('**/api/auth/refresh', (route) => (down ? route.abort() : route.continue()));
   await page.goto('/');
   await expect(page.getByRole('alert')).toContainText("can't load");
   down = false;

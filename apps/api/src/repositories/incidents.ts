@@ -1,5 +1,5 @@
 // Incidents and their append-only update log.
-import type { IncidentListItem, IncidentStatus, IncidentUpdate, Severity } from '@aravalli/shared';
+import type { IncidentListItem, IncidentStatus, IncidentUpdate, Scope, Severity } from '@aravalli/shared';
 import type { Executor, PoolConnection } from '../core/db';
 import { iso, isoOrNull, one, rows, run } from '../core/db';
 import { likePattern } from './directory';
@@ -19,6 +19,8 @@ export interface IncidentFilters {
   needs_attention?: boolean;
   /** true: only imported rows. false: only rows created in the product. */
   imported?: boolean;
+  /** Which rows the caller may see. Always set by the service from the session, never from the request. */
+  scope?: Scope;
 }
 
 const SORT: Record<string, string> = {
@@ -34,6 +36,7 @@ const SORT: Record<string, string> = {
   resolved_at: 'i.resolved_at',
 };
 export const INCIDENT_SORTS = Object.keys(SORT);
+const NULLABLE_SORTS = new Set(['assigned_to', 'resolved_at']);
 
 const SELECT = `SELECT i.incident_id, i.incident_code, i.title, i.severity, i.status, i.department_id, d.name AS department_name,
        i.reported_by, CONCAT(rp.first_name, ' ', rp.last_name) AS reported_by_name,
@@ -64,6 +67,8 @@ function where(organisationId: number, f: IncidentFilters) {
   if (f.needs_attention) w.push("i.status <> 'Closed' AND (i.assigned_to IS NULL OR i.risk_id IS NULL)");
   if (f.imported === true) w.push('i.source_id IS NOT NULL');
   if (f.imported === false) w.push('i.source_id IS NULL');
+  if (f.scope?.kind === 'department') { w.push('i.department_id = ?'); p.push(f.scope.departmentId); }
+  if (f.scope?.kind === 'own') { w.push('(i.reported_by = ? OR i.assigned_to = ?)'); p.push(f.scope.employeeId, f.scope.employeeId); }
   return { sql: w.join(' AND '), params: p };
 }
 
@@ -86,8 +91,19 @@ export async function listIncidents(db: Executor, organisationId: number, f: Inc
   const w = where(organisationId, f);
   const total = await countIncidents(db, organisationId, f);
   const column = SORT[sort] ?? SORT.reported_at;
-  const order = `${column} IS NULL, ${column}${desc ? ' DESC' : ''}, i.incident_id DESC`;
-  const data = await rows<ListRow>(db, `${SELECT} WHERE ${w.sql} ORDER BY ${order} LIMIT ? OFFSET ?`, [...w.params, limit, offset]);
+  // "col IS NULL" first only where the column can be empty; on the others it would stop MySQL reading the index in order.
+  const nullFirst = NULLABLE_SORTS.has(sort) ? `${column} IS NULL, ` : '';
+  const order = `${nullFirst}${column}${desc ? ' DESC' : ''}, i.incident_id DESC`;
+  // Deferred join: find the page's ids from the narrow table first (an index can often do that alone), then join the other
+  // tables for just those rows. A deep page used to join thousands of rows it then threw away.
+  const needsJoinedSort = ['department', 'reported_by', 'assigned_to'].includes(sort);
+  const data = needsJoinedSort
+    ? await rows<ListRow>(db, `${SELECT} WHERE ${w.sql} ORDER BY ${order} LIMIT ? OFFSET ?`, [...w.params, limit, offset])
+    : await rows<ListRow>(
+        db,
+        `${SELECT} JOIN (SELECT i.incident_id AS pid FROM incident i WHERE ${w.sql} ORDER BY ${order} LIMIT ? OFFSET ?) page ON page.pid = i.incident_id ORDER BY ${order}`,
+        [...w.params, limit, offset],
+      );
   return { data: data.map(toItem), total };
 }
 
@@ -122,10 +138,10 @@ export async function listUpdates(db: Executor, organisationId: number, incident
 export async function lockIncident(conn: PoolConnection, organisationId: number, incidentId: number) {
   return one<{
     incident_id: number; incident_code: string; status: IncidentStatus; resolved_at: string | null;
-    reported_by: number; assigned_to: number | null; risk_id: number | null;
+    reported_by: number; assigned_to: number | null; risk_id: number | null; department_id: number;
   }>(
     conn,
-    `SELECT incident_id, incident_code, status, resolved_at, reported_by, assigned_to, risk_id
+    `SELECT incident_id, incident_code, status, resolved_at, reported_by, assigned_to, risk_id, department_id
      FROM incident WHERE organisation_id = ? AND incident_id = ? FOR UPDATE`,
     [organisationId, incidentId],
   );

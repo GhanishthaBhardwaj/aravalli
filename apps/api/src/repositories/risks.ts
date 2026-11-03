@@ -1,5 +1,5 @@
 // Risks and their assessments. Reads use the v_risk_current view (a risk plus its latest assessment).
-import type { RiskAssessment, RiskBand, RiskDetail, RiskListItem, RiskStatus } from '@aravalli/shared';
+import type { RiskAssessment, RiskBand, RiskDetail, RiskListItem, RiskStatus, Scope } from '@aravalli/shared';
 import type { Executor, PoolConnection } from '../core/db';
 import { iso, one, rows, run } from '../core/db';
 import { likePattern } from './directory';
@@ -15,6 +15,8 @@ export interface RiskFilters {
   impact?: number;
   /** true: only risks that are not Closed. */
   open?: boolean;
+  /** Which rows the caller may see. Always set by the service from the session, never from the request. */
+  scope?: Scope;
 }
 
 const SORT: Record<string, string> = {
@@ -48,6 +50,8 @@ function where(organisationId: number, f: RiskFilters) {
   if (f.likelihood) { w.push('v.likelihood = ?'); p.push(f.likelihood); }
   if (f.impact) { w.push('v.impact = ?'); p.push(f.impact); }
   if (f.open) w.push("v.status <> 'Closed'");
+  if (f.scope?.kind === 'department') { w.push('v.department_id = ?'); p.push(f.scope.departmentId); }
+  if (f.scope?.kind === 'own') w.push('1 = 0'); // employees have no access to the risk register
   return { sql: w.join(' AND '), params: p };
 }
 
@@ -115,9 +119,9 @@ export async function getRiskByCode(db: Executor, organisationId: number, code: 
 
 /** Locks the risk row until the transaction ends, so two status changes cannot interleave. */
 export async function lockRisk(conn: PoolConnection, organisationId: number, riskId: number) {
-  return one<{ risk_id: number; status: RiskStatus; identified_date: string; risk_code: string }>(
+  return one<{ risk_id: number; status: RiskStatus; identified_date: string; risk_code: string; department_id: number }>(
     conn,
-    'SELECT risk_id, status, identified_date, risk_code FROM risk WHERE organisation_id = ? AND risk_id = ? FOR UPDATE',
+    'SELECT risk_id, status, identified_date, risk_code, department_id FROM risk WHERE organisation_id = ? AND risk_id = ? FOR UPDATE',
     [organisationId, riskId],
   );
 }

@@ -6,12 +6,13 @@
 import type { PoolConnection } from '../core/db';
 import { one, run } from '../core/db';
 
-export type CounterName = 'risk' | 'incident';
+export type CounterName = 'risk' | 'incident' | 'employee';
 
 // Fixed internal names, never user input, because identifiers cannot be bound as parameters.
 const SOURCE: Record<CounterName, { table: string; codeColumn: string; prefix: string; width: number }> = {
   risk: { table: 'risk', codeColumn: 'risk_code', prefix: 'RSK-', width: 4 },
   incident: { table: 'incident', codeColumn: 'incident_code', prefix: 'INC-', width: 4 },
+  employee: { table: 'employee', codeColumn: 'employee_code', prefix: 'EMP-', width: 4 },
 };
 
 export const formatCode = (name: CounterName, n: number): string => `${SOURCE[name].prefix}${String(n).padStart(SOURCE[name].width, '0')}`;

@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { open, ready } from './helpers';
+import { expect } from '@playwright/test';
+import { open, ready, test, signInAs } from './helpers';
 
 const theme = (page: import('@playwright/test').Page) => page.evaluate(() => document.documentElement.dataset.theme);
 
@@ -143,6 +143,7 @@ test.describe('at 360px', () => {
 test('motion is switched off when the system asks for reduced motion', async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await ctx.newPage();
+  await signInAs(page, 'Neha Kapoor');
   await open(page, '/');
   // the heat map reveal would otherwise animate cells in; with reduced motion they are simply there
   const cell = page.getByRole('button', { name: /Likelihood 3, impact 4/ });

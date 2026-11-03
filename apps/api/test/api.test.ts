@@ -1,12 +1,15 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { as, startTestApp, validIncident, validRisk, type TestContext } from './helpers';
+import { agent, as, bind, startTestApp, validIncident, validRisk, type TestContext } from './helpers';
 
 let t: TestContext;
-const api = () => request(t.app);
+/** Signed in as the sample organisation's Risk Officer unless a request says otherwise with .set(as('admin')) etc. */
+const api = () => agent(t, 'officer');
+const anonymous = () => request(t.app);
 
 beforeAll(async () => {
   t = await startTestApp();
+  bind(t);
 });
 afterAll(async () => {
   await t.pool.end();
@@ -36,7 +39,7 @@ describe('health, docs and the error format', () => {
     expect(badId.status).toBe(400);
     expect(badId.body.error.code).toBe('validation_error');
 
-    const badJson = await api().post('/api/risks').set(as(t.people.admin)).set('Content-Type', 'application/json').send('{not json');
+    const badJson = await api().post('/api/risks').set(as('admin')).set('Content-Type', 'application/json').send('{not json');
     expect(badJson.status).toBe(400);
     expect(badJson.body.error.code).toBe('validation_error');
 
@@ -46,32 +49,39 @@ describe('health, docs and the error format', () => {
   });
 
   it('lists every field that failed validation, with a message each', async () => {
-    const res = await api().post('/api/risks').set(as(t.people.admin)).send({ title: 'x' });
+    const res = await api().post('/api/risks').set(as('admin')).send({ title: 'x' });
     expect(res.status).toBe(400);
     const fields = res.body.error.details.map((d: { field: string }) => d.field);
     expect(fields).toEqual(expect.arrayContaining(['description', 'category', 'department_id']));
   });
 });
 
-describe('request context', () => {
-  it('rejects an organisation that does not exist and malformed headers', async () => {
-    expect((await api().get('/api/risks').set('X-Organisation-Id', '9999')).body.error.code).toBe('organisation_not_found');
-    expect((await api().get('/api/risks').set('X-Organisation-Id', 'abc')).status).toBe(400);
-    expect((await api().get('/api/risks').set('X-Actor-Id', '-1')).status).toBe(400);
+describe('the session decides who is calling', () => {
+  it('refuses every protected endpoint without a valid token', async () => {
+    for (const path of ['/api/risks', '/api/incidents', '/api/reports/overview', '/api/employees', '/api/departments', '/api/organisations/current', '/api/auth/me', '/api/users']) {
+      const res = await anonymous().get(path);
+      expect(res.status, path).toBe(401);
+      expect(res.body.error.code).toBe('unauthorized');
+    }
+    expect((await anonymous().post('/api/risks').send(validRisk())).status).toBe(401);
+    expect((await anonymous().get('/api/risks').set('Authorization', 'Bearer not-a-token')).status).toBe(401);
+    expect((await anonymous().get('/api/risks').set('Authorization', 'Basic abc')).status).toBe(401);
   });
 
-  it('needs an acting employee for writes, and that employee must belong to the organisation', async () => {
-    const none = await api().post('/api/risks').send(validRisk());
-    expect(none.status).toBe(401);
-    expect(none.body.error.code).toBe('actor_required');
-    const foreign = await api().post('/api/risks').set(as(t.other.employeeId, 1)).send(validRisk());
-    expect(foreign.status).toBe(401);
+  it('ignores the old development headers: the organisation and actor come only from the session', async () => {
+    const res = await anonymous().get('/api/organisations/current').set(as('officer')).set('X-Organisation-Id', String(t.b.organisationId)).set('X-Actor-Id', String(t.b.ids.admin));
+    expect(res.body.data.slug).toBe('aravalli-industries');
+    const risks = await anonymous().get('/api/risks').set(as('officer')).set('X-Organisation-Id', String(t.b.organisationId));
+    expect(risks.body.data.some((r: { title: string }) => r.title === 'Their confidential risk')).toBe(false);
+    const created = await anonymous().post('/api/risks').set(as('officer')).set('X-Actor-Id', String(t.b.ids.admin)).send(validRisk());
+    expect(created.status).toBe(201);
   });
 
   it('lets an organisation read only itself', async () => {
     expect((await api().get('/api/organisations/current')).body.data.slug).toBe('aravalli-industries');
-    expect((await api().get(`/api/organisations/${t.other.organisationId}`)).status).toBe(404);
+    expect((await api().get(`/api/organisations/${t.b.organisationId}`)).status).toBe(404);
     expect((await api().get('/api/organisations/1')).status).toBe(200);
+    expect((await api().get('/api/organisations')).status).toBe(404); // the old organisation switcher endpoint is gone
   });
 });
 
@@ -176,7 +186,7 @@ describe('dashboard and reports', () => {
 
 describe('risks: the server is the source of truth', () => {
   it('registers a risk with a database-generated code, an assessment and an Assessed status', async () => {
-    const res = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk());
+    const res = await api().post('/api/risks').set(as('officer')).send(validRisk());
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ status: 'Assessed', risk_score: 12, severity_band: 'High', assessment_count: 1 });
     expect(res.body.data.risk_code).toMatch(/^RSK-\d{4,}$/);
@@ -185,49 +195,49 @@ describe('risks: the server is the source of truth', () => {
   });
 
   it('registers an unrated risk as Identified', async () => {
-    const res = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ likelihood: null, impact: null }));
+    const res = await api().post('/api/risks').set(as('officer')).send(validRisk({ likelihood: null, impact: null }));
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ status: 'Identified', severity_band: 'Unrated', risk_score: null });
   });
 
   it('applies the shared validation rules', async () => {
-    const future = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ identified_date: '2026-12-01' }));
+    const future = await api().post('/api/risks').set(as('officer')).send(validRisk({ identified_date: '2026-12-01' }));
     expect(future.status).toBe(400);
     expect(future.body.error.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'identified_date' })]));
-    const halfRated = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ impact: null }));
+    const halfRated = await api().post('/api/risks').set(as('officer')).send(validRisk({ impact: null }));
     expect(halfRated.status).toBe(400);
-    const shortTitle = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ title: 'abc' }));
+    const shortTitle = await api().post('/api/risks').set(as('officer')).send(validRisk({ title: 'abc' }));
     expect(shortTitle.status).toBe(400);
-    const outOfRange = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ likelihood: 9 }));
+    const outOfRange = await api().post('/api/risks').set(as('officer')).send(validRisk({ likelihood: 9 }));
     expect(outOfRange.status).toBe(400);
     expect(outOfRange.body.error.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'likelihood' })]));
   });
 
   it('enforces roles on the server: auditors and employees cannot register risks', async () => {
-    const auditor = await api().post('/api/risks').set(as(t.people.auditor)).send(validRisk());
+    const auditor = await api().post('/api/risks').set(as('auditor')).send(validRisk());
     expect(auditor.status).toBe(403);
     expect(auditor.body.error.message).toMatch(/read-only/i);
-    const employee = await api().post('/api/risks').set(as(t.people.employee)).send(validRisk());
+    const employee = await api().post('/api/risks').set(as('employee')).send(validRisk());
     expect(employee.status).toBe(403);
   });
 
   it('adds assessments, recomputes the current score and keeps history', async () => {
-    const created = (await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ likelihood: 2, impact: 2 }))).body.data;
-    const res = await api().post(`/api/risks/${created.risk_id}/assessments`).set(as(t.people.officer))
+    const created = (await api().post('/api/risks').set(as('officer')).send(validRisk({ likelihood: 2, impact: 2 }))).body.data;
+    const res = await api().post(`/api/risks/${created.risk_id}/assessments`).set(as('officer'))
       .send({ likelihood: 5, impact: 5, assessment_date: '2026-10-20', mitigation_notes: 'Escalated.' });
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ risk_score: 25, severity_band: 'Critical', assessment_count: 2 });
     const history = (await api().get(`/api/risks/${created.risk_id}/assessments`)).body.data;
     expect(history.map((a: { risk_score: number }) => a.risk_score)).toEqual([4, 25]);
-    const early = await api().post(`/api/risks/${created.risk_id}/assessments`).set(as(t.people.officer))
+    const early = await api().post(`/api/risks/${created.risk_id}/assessments`).set(as('officer'))
       .send({ likelihood: 1, impact: 1, assessment_date: '2020-01-01', mitigation_notes: '' });
     expect(early.status).toBe(400);
   });
 
   it('follows the risk lifecycle and needs a note to close', async () => {
-    const unrated = (await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ likelihood: null, impact: null }))).body.data;
+    const unrated = (await api().post('/api/risks').set(as('officer')).send(validRisk({ likelihood: null, impact: null }))).body.data;
     const id = unrated.risk_id;
-    const status = (to: string, note = '') => api().post(`/api/risks/${id}/status`).set(as(t.people.officer)).send({ status: to, note });
+    const status = (to: string, note = '') => api().post(`/api/risks/${id}/status`).set(as('officer')).send({ status: to, note });
     expect((await status('Assessed')).status).toBe(400); // no assessment yet
     expect((await status('Closed')).status).toBe(400); // closing needs a note
     expect((await status('Closed', 'Accepted by the board.')).body.data.status).toBe('Closed');
@@ -238,27 +248,30 @@ describe('risks: the server is the source of truth', () => {
 
 describe('incidents: the server is the source of truth', () => {
   it('reports an incident as Open with a generated code and a first timeline entry', async () => {
-    const res = await api().post('/api/incidents').set(as(t.people.employee)).send(validIncident({ assigned_to: t.people.officer }));
+    const res = await api().post('/api/incidents').set(as('officer')).send(validIncident({ assigned_to: t.people.admin }));
     expect(res.status).toBe(201);
     const inc = res.body.data;
-    expect(inc).toMatchObject({ status: 'Open', reported_by: t.people.employee, resolved_at: null });
+    expect(inc).toMatchObject({ status: 'Open', reported_by: t.people.officer, resolved_at: null });
     expect(inc.incident_code).toMatch(/^INC-\d{4,}$/);
     expect(inc.updates.map((u: { update_text: string }) => u.update_text)).toEqual(expect.arrayContaining(['Incident reported']));
     expect(inc.updates).toHaveLength(2); // reported + assigned
+    // an employee can report, but not assign or link while doing so
+    expect((await api().post('/api/incidents').set(as('employee')).send(validIncident())).status).toBe(201);
+    expect((await api().post('/api/incidents').set(as('employee')).send(validIncident({ assigned_to: t.people.admin }))).status).toBe(403);
   });
 
   it('rejects an occurrence time in the future (by the injected clock) and unknown references', async () => {
-    const future = await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident({ occurred_at: '2026-10-21T09:00' }));
+    const future = await api().post('/api/incidents').set(as('officer')).send(validIncident({ occurred_at: '2026-10-21T09:00' }));
     expect(future.status).toBe(400);
-    const badDept = await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident({ department_id: 9999 }));
+    const badDept = await api().post('/api/incidents').set(as('officer')).send(validIncident({ department_id: 9999 }));
     expect(badDept.status).toBe(400);
-    const badRisk = await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident({ risk_id: 9999 }));
+    const badRisk = await api().post('/api/incidents').set(as('officer')).send(validIncident({ risk_id: 9999 }));
     expect(badRisk.status).toBe(400);
   });
 
   it('walks the lifecycle: resolve needs a note, resolved_at is set and cleared, Closed is final', async () => {
-    const inc = (await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident())).body.data;
-    const update = (text: string, to: string | null) => api().post(`/api/incidents/${inc.incident_id}/updates`).set(as(t.people.officer)).send({ update_text: text, status_to: to });
+    const inc = (await api().post('/api/incidents').set(as('officer')).send(validIncident())).body.data;
+    const update = (text: string, to: string | null) => api().post(`/api/incidents/${inc.incident_id}/updates`).set(as('officer')).send({ update_text: text, status_to: to });
 
     expect((await update('Skipping ahead', 'Resolved')).status).toBe(400); // Open -> Resolved is not allowed
     expect((await update('Looking into it', 'Investigating')).body.data.status).toBe('Investigating');
@@ -279,21 +292,22 @@ describe('incidents: the server is the source of truth', () => {
   });
 
   it('stops employees closing incidents or touching incidents that are not theirs', async () => {
-    const inc = (await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident())).body.data;
-    const res = await api().post(`/api/incidents/${inc.incident_id}/updates`).set(as(t.people.employee)).send({ update_text: 'hello', status_to: null });
-    expect(res.status).toBe(403);
-    const assign = await api().patch(`/api/incidents/${inc.incident_id}/assignment`).set(as(t.people.employee)).send({ employee_id: t.people.employee });
+    const inc = (await api().post('/api/incidents').set(as('officer')).send(validIncident())).body.data;
+    const res = await api().post(`/api/incidents/${inc.incident_id}/updates`).set(as('employee')).send({ update_text: 'hello', status_to: null });
+    expect(res.status).toBe(404); // not theirs: it does not exist as far as they can tell
+    expect((await api().get(`/api/incidents/${inc.incident_id}`).set(as('employee'))).status).toBe(404);
+    const assign = await api().patch(`/api/incidents/${inc.incident_id}/assignment`).set(as('employee')).send({ employee_id: t.people.employee });
     expect(assign.status).toBe(403);
   });
 
   it('assigns and links, writing a timeline entry each time, and refuses no-ops', async () => {
-    const inc = (await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident())).body.data;
-    const assigned = await api().patch(`/api/incidents/${inc.incident_id}/assignment`).set(as(t.people.officer)).send({ employee_id: t.people.admin });
+    const inc = (await api().post('/api/incidents').set(as('officer')).send(validIncident())).body.data;
+    const assigned = await api().patch(`/api/incidents/${inc.incident_id}/assignment`).set(as('officer')).send({ employee_id: t.people.admin });
     expect(assigned.body.data.assigned_to).toBe(t.people.admin);
-    expect((await api().patch(`/api/incidents/${inc.incident_id}/assignment`).set(as(t.people.officer)).send({ employee_id: t.people.admin })).status).toBe(400);
-    const linked = await api().patch(`/api/incidents/${inc.incident_id}/risk-link`).set(as(t.people.officer)).send({ risk_id: 2 });
+    expect((await api().patch(`/api/incidents/${inc.incident_id}/assignment`).set(as('officer')).send({ employee_id: t.people.admin })).status).toBe(400);
+    const linked = await api().patch(`/api/incidents/${inc.incident_id}/risk-link`).set(as('officer')).send({ risk_id: 2 });
     expect(linked.body.data.risk_code).toBe('RSK-0002');
-    const unlinked = await api().patch(`/api/incidents/${inc.incident_id}/risk-link`).set(as(t.people.officer)).send({ risk_id: null });
+    const unlinked = await api().patch(`/api/incidents/${inc.incident_id}/risk-link`).set(as('officer')).send({ risk_id: null });
     expect(unlinked.body.data.risk_id).toBeNull();
     const texts = unlinked.body.data.updates.map((u: { update_text: string }) => u.update_text);
     expect(texts).toEqual(expect.arrayContaining(['Linked to risk RSK-0002', 'Risk link removed']));
@@ -306,33 +320,33 @@ describe('tenant isolation', () => {
     expect(risks.some((r: { title: string }) => r.title === 'Their confidential risk')).toBe(false);
     const incidents = (await api().get('/api/incidents').query({ limit: 100 })).body.data;
     expect(incidents.some((i: { title: string }) => i.title === 'Their confidential incident')).toBe(false);
-    expect((await api().get(`/api/risks/${t.other.riskId}`)).status).toBe(404);
-    expect((await api().get(`/api/incidents/${t.other.incidentId}`)).status).toBe(404);
-    expect((await api().get(`/api/employees/${t.other.employeeId}`)).status).toBe(404);
-    expect((await api().get(`/api/departments/${t.other.departmentId}`)).status).toBe(404);
+    expect((await api().get(`/api/risks/${t.b.riskId}`)).status).toBe(404);
+    expect((await api().get(`/api/incidents/${t.b.incidentId}`)).status).toBe(404);
+    expect((await api().get(`/api/employees/${t.b.ids.admin}`)).status).toBe(404);
+    expect((await api().get(`/api/departments/${t.b.departmentId}`)).status).toBe(404);
     expect((await api().get('/api/risks/by-code/RSK-0001')).body.data.title).not.toBe('Their confidential risk');
 
     // and the other side sees only its own
-    const theirs = await api().get('/api/risks').set('X-Organisation-Id', String(t.other.organisationId));
+    const theirs = await api().get('/api/risks').set(as('officer', 'b'));
     expect(theirs.body.data.map((r: { title: string }) => r.title)).toEqual(['Their confidential risk']);
   });
 
   it('cannot write across organisations by naming another organisation\'s ids', async () => {
-    const risk = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ department_id: t.other.departmentId }));
+    const risk = await api().post('/api/risks').set(as('officer')).send(validRisk({ department_id: t.b.departmentId }));
     expect(risk.status).toBe(400);
-    const owner = await api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ owner_employee_id: t.other.employeeId }));
+    const owner = await api().post('/api/risks').set(as('officer')).send(validRisk({ owner_employee_id: t.b.ids.officer }));
     expect(owner.status).toBe(400);
-    const incident = (await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident())).body.data;
-    expect((await api().patch(`/api/incidents/${incident.incident_id}/risk-link`).set(as(t.people.officer)).send({ risk_id: t.other.riskId })).status).toBe(400);
-    expect((await api().patch(`/api/incidents/${incident.incident_id}/assignment`).set(as(t.people.officer)).send({ employee_id: t.other.employeeId })).status).toBe(400);
-    expect((await api().post(`/api/incidents/${t.other.incidentId}/updates`).set(as(t.people.officer)).send({ update_text: 'hijack', status_to: null })).status).toBe(404);
-    expect((await api().post(`/api/risks/${t.other.riskId}/assessments`).set(as(t.people.officer))
+    const incident = (await api().post('/api/incidents').set(as('officer')).send(validIncident())).body.data;
+    expect((await api().patch(`/api/incidents/${incident.incident_id}/risk-link`).set(as('officer')).send({ risk_id: t.b.riskId })).status).toBe(400);
+    expect((await api().patch(`/api/incidents/${incident.incident_id}/assignment`).set(as('officer')).send({ employee_id: t.b.ids.officer })).status).toBe(400);
+    expect((await api().post(`/api/incidents/${t.b.incidentId}/updates`).set(as('officer')).send({ update_text: 'hijack', status_to: null })).status).toBe(404);
+    expect((await api().post(`/api/risks/${t.b.riskId}/assessments`).set(as('officer'))
       .send({ likelihood: 5, impact: 5, assessment_date: '2026-10-20', mitigation_notes: '' })).status).toBe(404);
   });
 
   it('numbers codes separately in each organisation', async () => {
-    const theirs = await api().post('/api/risks').set(as(t.other.employeeId, t.other.organisationId))
-      .send(validRisk({ department_id: t.other.departmentId, owner_employee_id: t.other.employeeId }));
+    const theirs = await api().post('/api/risks').set(as('officer', 'b'))
+      .send(validRisk({ department_id: t.b.departmentId, owner_employee_id: t.b.ids.officer }));
     expect(theirs.status).toBe(201);
     expect(theirs.body.data.risk_code).toBe('RSK-0002'); // RSK-0001 exists in their organisation; ours are far beyond that
   });
@@ -344,7 +358,7 @@ describe('codes under concurrent requests', () => {
   it('gives 30 simultaneous risk registrations 30 different, consecutive codes', async () => {
     const before = (await api().get('/api/risks').query({ sort: 'code', order: 'desc', limit: 1 })).body.data[0].risk_code as string;
     const results = await Promise.all(
-      Array.from({ length: 30 }, (_, i) => api().post('/api/risks').set(as(t.people.officer)).send(validRisk({ title: `Concurrent risk number ${i}` }))),
+      Array.from({ length: 30 }, (_, i) => api().post('/api/risks').set(as('officer')).send(validRisk({ title: `Concurrent risk number ${i}` }))),
     );
     expect(results.map((r) => r.status)).toEqual(Array(30).fill(201));
     const numbers = results.map((r) => codeNumber(r.body.data.risk_code)).sort((a, b) => a - b);
@@ -356,7 +370,7 @@ describe('codes under concurrent requests', () => {
   it('does the same for 30 simultaneous incident reports', async () => {
     const before = (await api().get('/api/incidents').query({ sort: 'code', order: 'desc', limit: 1 })).body.data[0].incident_code as string;
     const results = await Promise.all(
-      Array.from({ length: 30 }, (_, i) => api().post('/api/incidents').set(as(t.people.officer)).send(validIncident({ title: `Concurrent incident number ${i}` }))),
+      Array.from({ length: 30 }, (_, i) => api().post('/api/incidents').set(as('officer')).send(validIncident({ title: `Concurrent incident number ${i}` }))),
     );
     expect(results.map((r) => r.status)).toEqual(Array(30).fill(201));
     const numbers = results.map((r) => codeNumber(r.body.data.incident_code)).sort((a, b) => a - b);
@@ -366,11 +380,11 @@ describe('codes under concurrent requests', () => {
   });
 
   it('lets two simultaneous updates to one incident take turns, never both winning a status change', async () => {
-    const inc = (await api().post('/api/incidents').set(as(t.people.officer)).send(validIncident())).body.data;
-    await api().post(`/api/incidents/${inc.incident_id}/updates`).set(as(t.people.officer)).send({ update_text: 'Looking', status_to: 'Investigating' });
+    const inc = (await api().post('/api/incidents').set(as('officer')).send(validIncident())).body.data;
+    await api().post(`/api/incidents/${inc.incident_id}/updates`).set(as('officer')).send({ update_text: 'Looking', status_to: 'Investigating' });
     const [a, b] = await Promise.all([
-      api().post(`/api/incidents/${inc.incident_id}/updates`).set(as(t.people.officer)).send({ update_text: 'Contain it', status_to: 'Contained' }),
-      api().post(`/api/incidents/${inc.incident_id}/updates`).set(as(t.people.admin)).send({ update_text: 'Contain it too', status_to: 'Contained' }),
+      api().post(`/api/incidents/${inc.incident_id}/updates`).set(as('officer')).send({ update_text: 'Contain it', status_to: 'Contained' }),
+      api().post(`/api/incidents/${inc.incident_id}/updates`).set(as('admin')).send({ update_text: 'Contain it too', status_to: 'Contained' }),
     ]);
     expect([a.status, b.status]).toEqual([201, 201]); // the second waits for the lock, then sees the incident already Contained and records a plain note
     const timeline = (await api().get(`/api/incidents/${inc.incident_id}/updates`)).body.data;

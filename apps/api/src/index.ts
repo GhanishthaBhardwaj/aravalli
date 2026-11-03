@@ -7,11 +7,12 @@ import { createPool } from './core/db';
 loadEnvFile();
 const config = readAppConfig(process.env);
 const pool = createPool(config.db);
-const app = createApp({ pool, clock: systemClock, defaultOrganisationId: config.devOrganisationId });
+const app = createApp({ pool, clock: systemClock, auth: config.auth });
 
 const server = app.listen(config.port, '127.0.0.1', () => {
   console.log(`Aravalli API  http://127.0.0.1:${config.port}   docs: http://127.0.0.1:${config.port}/api/docs`);
-  console.log('DEV MODE: organisation and actor come from request headers, not from a login (Phase 3).');
+  if (config.auth.demoLogins) console.log('Demo logins are ON (DEMO_LOGINS=true): anyone who can reach this server can sign in as a demo user.');
+  if (config.auth.mail.mode === 'console') console.log('Email goes to this console (MAIL_MODE=console): copy links from here.');
 });
 
 // Graceful shutdown: stop taking requests, let running ones finish, then close the pool.

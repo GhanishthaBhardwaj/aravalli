@@ -1,0 +1,16 @@
+| Endpoint | p50 (ms) | p95 (ms) |
+| --- | ---: | ---: |
+| GET /incidents (first page) | 19.0 | 25.5 |
+| GET /incidents (filtered: High+Critical, one department) | 54.2 | 117.5 |
+| GET /incidents (open only, newest first) | 4.2 | 5.2 |
+| GET /incidents (deep page, near the end) | 16.9 | 18.2 |
+| GET /incidents (text search) | 50.6 | 108.2 |
+| GET /incidents (sorted by title) | 18.3 | 24.2 |
+| GET /reports/overview | 161.1 | 372.6 |
+| GET /reports/risk-profile | 3.3 | 4.2 |
+| GET /reports/resolution | 225.0 | 500.4 |
+| GET /departments | 45.9 | 113.8 |
+| GET /employees (first page) | 20.7 | 45.0 |
+| GET /risks (current assessment, first page) | 4.6 | 6.1 |
+
+Database aravalli_dev, organisation meridian-it-services, 24802 incidents, 60 timed requests per endpoint.

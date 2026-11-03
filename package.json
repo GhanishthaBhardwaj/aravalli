@@ -25,7 +25,10 @@
     "db:seed-sql": "npm run seed-sql -w @aravalli/api",
     "dev:web": "npm run dev -w @aravalli/web",
     "dev:api": "npm run dev -w @aravalli/api",
-    "data:download": "npm run data:download -w @aravalli/api"
+    "data:download": "npm run data:download -w @aravalli/api",
+    "import:uci": "npm run import:uci -w @aravalli/api",
+    "import:osha": "npm run import:osha -w @aravalli/api",
+    "perf": "npm run perf -w @aravalli/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

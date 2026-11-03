@@ -5,7 +5,7 @@ is and where it must go. Do NOT write or change any code in this session.
 You built Aravalli, an Enterprise Risk & Incident Management app, in this
 folder. It works as a demo, but it does not feel like a professional product:
 - It is frontend-only. Data lives in browser localStorage.
-- There is no real login. The login/"Acting as" screen shows a list of
+- (Phase 0 note, now solved in Phase 3) There was no real login. The login/"Acting as" screen showed a list of
   pre-made users and you just pick one. Anyone can be anyone.
 - Lots of hardcoded names and fixed demo data everywhere. A new user from a
   different company could never actually use it.

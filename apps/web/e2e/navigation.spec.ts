@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { open } from './helpers';
+import { expect } from '@playwright/test';
+import { open, test } from './helpers';
 
 const PAGES: [string, string, string][] = [
   ['/', 'Overview', 'Overview'],

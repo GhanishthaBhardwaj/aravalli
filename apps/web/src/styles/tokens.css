@@ -158,3 +158,8 @@
   .app-main { padding: 0 !important; margin: 0 !important; }
   body.print-single [data-report]:not([data-print-active]) { display: none !important; }
 }
+
+/* The landing page shows the screenshot that matches the colour theme. */
+.theme-dark-only { display: none; }
+[data-theme='dark'] .theme-light-only { display: none; }
+[data-theme='dark'] .theme-dark-only { display: block; }

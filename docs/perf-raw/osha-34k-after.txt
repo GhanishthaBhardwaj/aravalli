@@ -1,0 +1,16 @@
+| Endpoint | p50 (ms) | p95 (ms) |
+| --- | ---: | ---: |
+| GET /incidents (first page) | 11.7 | 22.2 |
+| GET /incidents (filtered: High+Critical, one department) | 68.1 | 155.8 |
+| GET /incidents (open only, newest first) | 5.2 | 7.5 |
+| GET /incidents (deep page, near the end) | 24.2 | 80.0 |
+| GET /incidents (text search) | 196.8 | 417.9 |
+| GET /incidents (sorted by title) | 23.3 | 25.6 |
+| GET /reports/overview | 227.9 | 468.0 |
+| GET /reports/risk-profile | 6.1 | 8.0 |
+| GET /reports/resolution | 239.8 | 537.7 |
+| GET /departments | 58.8 | 121.3 |
+| GET /employees (first page) | 7.4 | 9.7 |
+| GET /risks (current assessment, first page) | 3.9 | 5.5 |
+
+Database aravalli_perf, organisation ironbridge-manufacturing, 34472 incidents, 60 timed requests per endpoint.

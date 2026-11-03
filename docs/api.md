@@ -16,24 +16,35 @@ core/          config, connection pool, error format, request context, route reg
 
 A request that fails validation never reaches a service. A service never builds SQL. A repository never decides anything.
 
-## Who is asking, and for which organisation (DEV ONLY until Phase 3)
+## Who is asking, and for which organisation
 
-Every repository query takes `organisationId` from one object, `req.ctx` (`core/context.ts`). Until login exists that object is
-filled from two request headers:
+Every repository query takes `organisationId` from one object, `req.ctx` (`core/context.ts`), and that object is built from the
+**verified session** only: the `Authorization: Bearer <access token>` header names the user, and the organisation, role and
+department are read from the database on every request (so a deactivation or a role change takes effect on the very next request).
+The body, the URL and every other header are never consulted for the organisation. The old `X-Organisation-Id` / `X-Actor-Id`
+headers, the organisation switcher and `GET /organisations` are gone; a test sends them and checks they are ignored.
 
-| Header | Meaning |
+Every route declares its `access` (`'public'`, `'session'`, or a permission from the shared map) and cannot be registered without
+one. The permission middleware refuses with 403; services then apply scope (Department Heads: their department; Employees: incidents they
+reported or hold) and answer **404** for anything outside it, exactly as for another organisation's records.
+
+**Sessions.** Access token: 15-minute JWT (HS256), kept in memory by the web app. Refresh token: random, stored hashed, delivered only
+as an httpOnly, SameSite=Strict, Secure cookie scoped to `/api/auth`, rotated on every use. Using an already-used refresh token
+revokes the whole login (all tokens with that `family_id`). Reset, verification and invitation links are random, hashed, single-use and expire.
+
+## Auth and user-management endpoints
+
+| | |
 | --- | --- |
-| `X-Organisation-Id` | The organisation. Defaults to `DEV_ORGANISATION_ID`, else the lowest organisation id. |
-| `X-Actor-Id` | The employee acting. Required for every write; checked to exist, be active and belong to that organisation. |
-
-**This is not security**: anyone can send any value. Phase 3 replaces `devContext` with middleware that reads a verified session,
-and nothing else changes. `GET /api/organisations` (a list of all organisations, for the web app's switcher) is also dev-only.
+| Public | `POST /auth/signup`, `/auth/login` (rate limited), `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/invitations/lookup`, `/auth/invitations/accept`, `GET /auth/demo-accounts`, `POST /auth/demo-login` (the last two exist only when `DEMO_LOGINS=true`) |
+| Signed in | `GET /auth/me`, `POST /auth/resend-verification` |
+| Org Admin (`user.manage`) | `GET /users`, `PATCH /users/:id` (role, department, deactivate; an organisation keeps at least one active Org Admin), `GET`/`POST /invitations`, `DELETE /invitations/:id` |
 
 ## Endpoints
 
 | | |
 | --- | --- |
-| Organisations | `GET /organisations` (dev), `/organisations/current`, `/organisations/:id` (only your own) |
+| Organisations | `GET /organisations/current`, `/organisations/:id` (only your own) |
 | Departments | `GET /departments` (with open risk, open incident and headcount figures), `/departments/:id` |
 | Employees | `GET /employees` (search, department, role, active, sort, page), `/employees/:id` |
 | Risks | `GET /risks`, `POST /risks`, `GET /risks/:id`, `GET /risks/by-code/:code`, `GET` and `POST /risks/:id/assessments`, `POST /risks/:id/status` |

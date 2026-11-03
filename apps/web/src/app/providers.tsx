@@ -1,24 +1,36 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { systemClock } from '@aravalli/shared';
-import type { Clock, Employee, OrganisationSummary } from '@aravalli/shared';
-import { api, getSession, setSession } from '../api/client';
-import { ErrorState, PageSkeleton } from '../components/ui/states';
+import { hasPermission, systemClock } from '@aravalli/shared';
+import type { Clock, Employee, Permission, SessionUser } from '@aravalli/shared';
+import { auth, onSignedOut, refreshSession } from '../api/client';
 
-// ---------------------------------------------------------------- session
-// Which organisation we are looking at and who is "acting". DEV ONLY until Phase 3 replaces this with a login;
-// the choice is sent to the API as headers (see api/client.ts). No business data is kept in the browser.
+// ------------------------------------------------------------------------------------------------------------- auth
+// Whether anybody is signed in. The answer comes from the server: on load we ask it to exchange the httpOnly refresh cookie
+// for an access token. Nothing about the user is kept in localStorage.
+type Status = 'loading' | 'out' | 'in' | 'error';
+interface AuthCtx {
+  status: Status;
+  user: SessionUser | null;
+  /** Why the app could not start (the server is unreachable), when status is 'error'. */
+  error: string;
+  retry: () => void;
+  /** Called by the sign-in / sign-up / accept-invite forms with the user the server returned. */
+  setUser: (u: SessionUser) => void;
+  signOut: () => Promise<void>;
+}
+const AuthContext = createContext<AuthCtx | null>(null);
+
+// -------------------------------------------------------------------------------------------------- session (signed in)
 interface SessionCtx {
-  organisations: OrganisationSummary[];
-  organisation: OrganisationSummary;
-  /** People offered by the "Acting as" picker (the full employee record, so role rules can disable buttons). */
-  people: Employee[];
+  user: SessionUser;
+  organisation: { organisation_id: number; name: string; data_note: string | null; is_demo: boolean };
+  /** The signed-in person's employee record (role, department), so role rules can disable buttons. */
   actor: Employee;
   /** The real clock: the server decides what "now" means for stored data, this only limits date pickers. */
   clock: Clock;
-  setActorId: (id: number) => void;
-  setOrganisationId: (id: number) => void;
+  can: (permission: Permission) => boolean;
+  signOut: () => Promise<void>;
 }
 const SessionContext = createContext<SessionCtx | null>(null);
 
@@ -32,59 +44,58 @@ export interface Meta { title: string }
 interface MetaCtx { meta: Meta; setMeta: (m: Meta) => void }
 const MetaContext = createContext<MetaCtx | null>(null);
 
-type Boot =
-  | { state: 'loading' }
-  | { state: 'error'; message: string }
-  | { state: 'ready'; organisations: OrganisationSummary[]; organisationId: number; people: Employee[]; actorId: number };
-
-const PICKER_SIZE = 100;
-
-async function boot(wantedOrg: number | null, wantedActor: number | null): Promise<Boot> {
-  const organisations = await api.organisations();
-  if (!organisations.length) return { state: 'error', message: 'There are no organisations in the database yet. Run npm run db:seed.' };
-  const organisation = organisations.find((o) => o.organisation_id === wantedOrg) ?? organisations[0];
-  setSession({ organisationId: organisation.organisation_id });
-  const page = await api.employees({ limit: PICKER_SIZE, sort: 'role', active: true });
-  const people = page.data as Employee[];
-  if (!people.length) return { state: 'error', message: `${organisation.name} has no employees yet, so nobody can act.` };
-  const actor = people.find((p) => p.employee_id === wantedActor) ?? people.find((p) => p.role === 'Risk Officer') ?? people[0];
-  setSession({ actorId: actor.employee_id });
-  return { state: 'ready', organisations, organisationId: organisation.organisation_id, people, actorId: actor.employee_id };
-}
-
 export function Providers({ children }: { children: ReactNode }) {
-  const [b, setB] = useState<Boot>({ state: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const [status, setStatus] = useState<Status>('loading');
+  const [user, setUserState] = useState<SessionUser | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [meta, setMeta] = useState<Meta>({ title: '' });
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
+  // on load: is there a valid refresh cookie?
   useEffect(() => {
     let live = true;
-    const s = getSession();
-    boot(s.organisationId, s.actorId).then(
-      (r) => live && setB(r),
-      (e: unknown) => live && setB({ state: 'error', message: e instanceof Error ? e.message : 'The server could not be reached.' }),
+    refreshSession().then(
+      (u) => {
+        if (!live) return;
+        setUserState(u);
+        setStatus(u ? 'in' : 'out');
+      },
+      (e: unknown) => {
+        if (!live) return;
+        setError(e instanceof Error ? e.message : 'The server could not be reached.');
+        setStatus('error');
+      },
     );
     return () => { live = false; };
   }, [attempt]);
+  const retry = useCallback(() => { setStatus('loading'); setAttempt((n) => n + 1); }, []);
 
-  const setActorId = useCallback((id: number) => {
-    setSession({ actorId: id });
-    setB((s) => (s.state === 'ready' ? { ...s, actorId: id } : s));
-  }, []);
+  // the server says the session is over (refresh failed mid-use, or the account was deactivated)
+  useEffect(() => onSignedOut(() => { setUserState(null); setStatus('out'); }), []);
 
-  const setOrganisationId = useCallback((id: number) => {
-    setSession({ organisationId: id, actorId: null });
-    setB({ state: 'loading' });
-    setAttempt((n) => n + 1);
+  const setUser = useCallback((u: SessionUser) => { setUserState(u); setStatus('in'); }, []);
+  const signOut = useCallback(async () => {
+    try {
+      await auth.logout();
+    } finally {
+      setUserState(null);
+      setStatus('out');
+    }
   }, []);
+  const authCtx = useMemo<AuthCtx>(() => ({ status, user, error, retry, setUser, signOut }), [status, user, error, retry, setUser, signOut]);
 
   const session = useMemo<SessionCtx | null>(() => {
-    if (b.state !== 'ready') return null;
-    const organisation = b.organisations.find((o) => o.organisation_id === b.organisationId)!;
-    const actor = b.people.find((p) => p.employee_id === b.actorId) ?? b.people[0];
-    return { organisations: b.organisations, organisation, people: b.people, actor, clock: systemClock, setActorId, setOrganisationId };
-  }, [b, setActorId, setOrganisationId]);
+    if (!user) return null;
+    return {
+      user,
+      organisation: { organisation_id: user.organisation_id, name: user.organisation_name, data_note: user.organisation_data_note, is_demo: user.is_demo },
+      actor: user.employee,
+      clock: systemClock,
+      can: (p) => hasPermission(user.employee.role, p),
+      signOut,
+    };
+  }, [user, signOut]);
 
   const push = useCallback((message: string) => {
     const id = Date.now() + Math.random();
@@ -97,18 +108,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={toast}>
       <MetaContext.Provider value={metaCtx}>
-        {session ? (
-          // keyed by organisation, so switching organisation throws away every screen's loaded data
-          <SessionContext.Provider key={session.organisation.organisation_id} value={session}>{children}</SessionContext.Provider>
-        ) : (
-          <div className="mx-auto max-w-[1180px] px-4 py-14 md:px-10">
-            {b.state === 'error' ? (
-              <ErrorState title="Aravalli can't load" body={b.message} onRetry={() => { setB({ state: 'loading' }); setAttempt((n) => n + 1); }} />
-            ) : (
-              <PageSkeleton />
-            )}
-          </div>
-        )}
+        <AuthContext.Provider value={authCtx}>
+          {/* keyed by user, so signing in as someone else throws away every screen's loaded data */}
+          <SessionContext.Provider key={user?.user_id ?? 'none'} value={session}>{children}</SessionContext.Provider>
+        </AuthContext.Provider>
         <div className="no-print fixed bottom-4 right-4 z-[60] flex w-[min(92vw,380px)] flex-col gap-2" role="status" aria-live="polite">
           <AnimatePresence initial={false}>
             {toasts.map((t) => (
@@ -132,9 +135,15 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 }
 
+export function useAuth() {
+  const c = useContext(AuthContext);
+  if (!c) throw new Error('useAuth outside Providers');
+  return c;
+}
+/** Only inside the signed-in app. */
 export function useSession() {
   const c = useContext(SessionContext);
-  if (!c) throw new Error('useSession outside Providers');
+  if (!c) throw new Error('useSession outside a signed-in screen');
   return c;
 }
 export function useToast() {

@@ -7,7 +7,8 @@ export type ErrorCode =
   | 'not_found'
   | 'conflict'
   | 'forbidden'
-  | 'actor_required'
+  | 'unauthorized'
+  | 'rate_limited'
   | 'organisation_not_found'
   | 'internal_error';
 
@@ -16,7 +17,8 @@ const STATUS: Record<ErrorCode, number> = {
   not_found: 404,
   conflict: 409,
   forbidden: 403,
-  actor_required: 401,
+  unauthorized: 401,
+  rate_limited: 429,
   organisation_not_found: 404,
   internal_error: 500,
 };

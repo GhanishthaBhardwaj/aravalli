@@ -3,12 +3,15 @@ import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useSession } from './providers';
+import { auth } from '../api/client';
+import { useSession, useToast } from './providers';
 import { Sidebar } from '../components/shell/Sidebar';
 import { Topbar } from '../components/shell/Topbar';
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { organisation } = useSession();
+  const { organisation, user } = useSession();
+  const toast = useToast();
+  const [asked, setAsked] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setDrawer(false), [pathname]);
@@ -50,9 +53,21 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setDrawer(true)} />
+        {!user.email_verified && !user.is_demo && (
+          <div className="no-print border-b border-line bg-surface-2 px-4 py-2.5 text-[14px] md:px-10" role="status" data-testid="verify-banner">
+            <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-3">
+              <span>Confirm your email address: we sent a link to <strong className="font-semibold">{user.email}</strong>.</span>
+              <button type="button" disabled={asked} className="font-medium underline decoration-line-strong underline-offset-4 hover:decoration-fg disabled:no-underline disabled:opacity-60"
+                onClick={() => auth.resendVerification().then(() => { setAsked(true); toast.push('Confirmation email sent'); }, () => toast.push('Could not send the email'))}>
+                {asked ? 'Sent' : 'Resend'}
+              </button>
+            </div>
+          </div>
+        )}
         <main className="app-main mx-auto w-full max-w-[1180px] flex-1 px-4 py-10 md:px-10 md:py-14">{children}</main>
         <footer className="app-footer mx-auto w-full max-w-[1180px] px-4 pb-8 text-[13px] text-subtle md:px-10">
-          {organisation.is_demo ? `${organisation.name} is a demonstration organisation, not a customer. Data sources are credited in the README.` : organisation.name}
+          <span className="font-medium text-muted">{organisation.name}</span>
+          {organisation.data_note && <span data-testid="data-note"> · {organisation.data_note}</span>}
         </footer>
       </div>
     </div>

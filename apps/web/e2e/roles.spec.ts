@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { actAs, open, ready, toast } from './helpers';
+import { expect } from '@playwright/test';
+import { actAs, open, ready, toast, test } from './helpers';
 
 test('an Auditor is read-only everywhere, and disabled buttons say why', async ({ page }) => {
   await open(page, '/risks');
@@ -26,10 +26,9 @@ test('an Auditor is read-only everywhere, and disabled buttons say why', async (
 test('an Employee can report incidents but not manage risks, and can only update their own incidents', async ({ page }) => {
   await open(page, '/risks');
   await actAs(page, 'Pooja Nair');
-  const register = page.getByRole('button', { name: 'Register risk' });
-  await expect(register).toHaveAttribute('aria-disabled', 'true');
-  await register.hover();
-  await expect(page.getByRole('tooltip')).toContainText('Employees cannot register, assess or close risks.');
+  // the risk register is not part of an Employee's world: no menu entry, and the page says so
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Risk Register' })).toHaveCount(0);
+  await expect(page.getByText('cannot open this page')).toBeVisible();
 
   // reports an incident
   await open(page, '/incidents/new');
@@ -50,12 +49,12 @@ test('an Employee can report incidents but not manage risks, and can only update
 
   // someone else's incident is locked
   await open(page, '/incidents/INC-0030');
-  await expect(page.getByLabel('Note')).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Post update' })).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByText(/not found/i).first()).toBeVisible(); // it is not theirs, so for them it does not exist
+  await expect(page.getByLabel('Note')).toHaveCount(0);
 });
 
 test('Risk Officer, Department Head and Org Admin have full actions', async ({ page }) => {
-  for (const who of ['Neha Kapoor', 'Rajesh Khanna', 'Arjun Menon']) {
+  for (const who of ['Neha Kapoor', 'Rajesh Khanna', 'Arjun Menon'] as const) {
     await open(page, '/risks');
     await actAs(page, who);
     await ready(page);
@@ -63,10 +62,11 @@ test('Risk Officer, Department Head and Org Admin have full actions', async ({ p
   }
 });
 
-test('the Acting-as choice survives a reload and the avatar follows it', async ({ page }) => {
+test('the session survives a reload and the account menu names the signed-in person', async ({ page }) => {
   await open(page, '/');
-  await actAs(page, 'Neha Kapoor');
+  await actAs(page, 'Arjun Menon');
   await page.reload();
   await ready(page);
-  await expect(page.getByLabel('Acting as')).toContainText('Neha Kapoor');
+  await expect(page.getByTestId('account-menu')).toContainText('Arjun Menon');
+  await expect(page.getByTestId('account-menu')).toContainText('Org Admin');
 });

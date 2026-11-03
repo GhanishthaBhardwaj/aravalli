@@ -141,7 +141,8 @@ describe('the schema, read as text (guarantees that hold before any server is in
     expect(sql).not.toMatch(/ON DELETE (CASCADE|SET NULL|SET DEFAULT)/);
   });
   it('scopes every code, name and email uniqueness to the organisation', () => {
-    const uniques = [...sql.matchAll(/UNIQUE KEY (uq_\w+) \(([^)]*)\)/g)].filter(([, name]) => /_(code|name|email)$/.test(name));
+    // uq_user_email is global on purpose: a person logs in with their email alone, so it must identify exactly one account.
+    const uniques = [...sql.matchAll(/UNIQUE KEY (uq_\w+) \(([^)]*)\)/g)].filter(([, name]) => /_(code|name|email)$/.test(name) && name !== 'uq_user_email');
     expect(uniques.length).toBeGreaterThanOrEqual(5);
     for (const [, name, cols] of uniques) expect(cols, name).toMatch(/organisation_id/);
   });
