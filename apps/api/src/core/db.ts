@@ -14,6 +14,8 @@ export function createPool(config: DbConfig, connectionLimit = 10): Pool {
     password: config.password,
     database: config.database,
     connectionLimit,
+    // a hosted database (TiDB Cloud) is reached over SSL and its certificate is checked; a local one is not (sslCa is unset)
+    ssl: config.sslCa ? { ca: config.sslCa, rejectUnauthorized: true } : config.ssl ? { rejectUnauthorized: true, minVersion: 'TLSv1.2' } : undefined,
     charset: 'UTF8MB4_0900_AI_CI', // the same collation the database uses, so string comparisons never mix collations
     dateStrings: true, // DATE / DATETIME stay plain strings: no time-zone surprises between the database and the API
     decimalNumbers: true, // AVG() and friends come back as numbers, not strings

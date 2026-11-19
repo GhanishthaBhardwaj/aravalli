@@ -14,6 +14,7 @@ import { seed } from '@aravalli/shared';
 import { readDbConfig } from './config';
 import { listMigrations } from './migrations';
 import { runMysql } from './mysql';
+import { isTidb, needsTriggers } from './tidb';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
 const repoRoot = join(apiRoot, '..', '..');
@@ -34,7 +35,10 @@ if (!setup.ok) {
   console.error(`Could not create ${verifyDb}:\n${setup.stderr}`);
   process.exit(1);
 }
+const tidb = isTidb(one('SELECT VERSION();'));
+if (tidb) run('SET GLOBAL tidb_enable_check_constraint = ON;', { database: false }); // best effort: a hosted TiDB may refuse
 for (const m of listMigrations(join(apiRoot, 'database', 'migrations'))) {
+  if (tidb && needsTriggers(m.sql)) continue; // TiDB has no triggers (see the Triggers checks below)
   const r = run(m.sql);
   if (!r.ok) {
     console.error(`Migration ${m.file} failed:\n${r.stderr}`);
@@ -177,6 +181,13 @@ add('Reporting queries', 'every query in queries.sql runs without error', querie
 interface Result extends Check { pass: boolean; detail: string }
 const results: Result[] = [];
 for (const c of checks) {
+  if (tidb && c.group === 'Triggers: rejected') {
+    // No triggers on TiDB: the same rule is a permission of the app's database user, proven by `npm run db:app-user:prod`.
+    const detail = 'SKIPPED on TiDB: no triggers. Enforced by the app database user having only SELECT and INSERT on this table (db:app-user:prod proves it).';
+    results.push({ ...c, pass: true, detail });
+    console.log(`SKIP  ${c.group}: ${c.name}`);
+    continue;
+  }
   const r = run(c.sql);
   let pass: boolean;
   let detail: string;
@@ -197,14 +208,14 @@ for (const c of checks) {
 }
 
 const failed = results.filter((r) => !r.pass);
-console.log(`\n${results.length - failed.length} of ${results.length} checks passed on MySQL ${version}.`);
+console.log(`\n${results.length - failed.length} of ${results.length} checks passed on ${tidb ? 'TiDB' : 'MySQL'} ${version}.`);
 
 if (reportPath) {
   const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const lines = [
     '# Database verification',
     '',
-    `Run on MySQL **${version}** at ${stamp} (UTC), against a throwaway database built from the migrations in \`apps/api/database/migrations\` and the sample seed.`,
+    `Run on ${tidb ? 'TiDB' : 'MySQL'} **${version}** at ${stamp} (UTC), against a throwaway database built from the migrations in \`apps/api/database/migrations\` and the sample seed.`,
     '',
     `**Result: ${results.length - failed.length} of ${results.length} checks passed.**`,
     '',

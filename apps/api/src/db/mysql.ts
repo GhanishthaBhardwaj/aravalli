@@ -2,7 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { defaultsFileText, type DbConfig } from './config';
+import { rootCertificates } from 'node:tls';
+import { defaultsFileText, type CliTls, type DbConfig } from './config';
 
 export interface MysqlResult {
   ok: boolean;
@@ -25,7 +26,15 @@ export function runMysql(config: DbConfig, sql: string, { database = true, query
   const dir = mkdtempSync(join(tmpdir(), 'aravalli-mysql-'));
   try {
     const defaults = join(dir, 'client.cnf');
-    writeFileSync(defaults, defaultsFileText(config), { mode: 0o600 });
+    let tls: CliTls | undefined;
+    if (config.sslCa || config.ssl) {
+      // a given CA is checked against; otherwise the publicly trusted authorities that ship with Node are written to a file
+      // (the mysql client on Windows has no certificate store of its own) and the host name is checked too
+      const caPath = join(dir, 'ca.pem');
+      writeFileSync(caPath, config.sslCa ?? rootCertificates.join('\n'), { mode: 0o600 });
+      tls = { caPath, mode: config.sslCa ? 'VERIFY_CA' : 'VERIFY_IDENTITY' };
+    }
+    writeFileSync(defaults, defaultsFileText(config, tls), { mode: 0o600 });
     const args = [`--defaults-extra-file=${defaults}`, '--default-character-set=utf8mb4'];
     if (query) args.push('--batch', '--skip-column-names');
     if (database) args.push('--database', config.database);

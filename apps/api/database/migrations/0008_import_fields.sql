@@ -10,9 +10,9 @@
 ALTER TABLE organisation
   ADD COLUMN data_note VARCHAR(600) NULL AFTER is_demo;
 
-ALTER TABLE incident
-  ADD COLUMN source_occurred_at VARCHAR(19)       NULL AFTER source_id,
-  ADD COLUMN made_sla           BOOLEAN           NULL AFTER source_occurred_at,
-  ADD COLUMN reassignment_count SMALLINT UNSIGNED NULL AFTER made_sla,
-  ADD COLUMN region             VARCHAR(30)       NULL AFTER reassignment_count,
-  ADD COLUMN industry_code      VARCHAR(6)        NULL AFTER region;
+-- One change per ALTER statement: TiDB (production) does not allow every mix of changes in a single statement.
+ALTER TABLE incident ADD COLUMN source_occurred_at VARCHAR(19)       NULL AFTER source_id;
+ALTER TABLE incident ADD COLUMN made_sla           BOOLEAN           NULL AFTER source_occurred_at;
+ALTER TABLE incident ADD COLUMN reassignment_count SMALLINT UNSIGNED NULL AFTER made_sla;
+ALTER TABLE incident ADD COLUMN region             VARCHAR(30)       NULL AFTER reassignment_count;
+ALTER TABLE incident ADD COLUMN industry_code      VARCHAR(6)        NULL AFTER region;

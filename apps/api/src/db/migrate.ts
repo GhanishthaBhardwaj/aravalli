@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { isDisposableDatabase, readDbConfig, type DbConfig } from './config';
 import { listMigrations, parseAppliedRows, planMigrations, type AppliedMigration } from './migrations';
 import { runMysql, type MysqlResult } from './mysql';
+import { isTidb, needsTriggers } from './tidb';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
 const repoRoot = join(apiRoot, '..', '..');
@@ -38,6 +39,7 @@ try {
   fail((e as Error).message);
 }
 
+console.log(`Database: ${config.database} on ${config.host}${config.sslCa ? ' (SSL)' : ''}`);
 const q = (sql: string, opts: { database?: boolean; query?: boolean } = {}) => runMysql(config, sql, opts);
 
 function ensureDatabase() {
@@ -55,14 +57,30 @@ function appliedRows(): AppliedMigration[] {
   return parseAppliedRows(r.stdout);
 }
 
+/** TiDB only enforces CHECK constraints when tidb_enable_check_constraint is ON. Try to turn it on; say so if that is not allowed. */
+function prepareTidb() {
+  const now = q("SHOW VARIABLES LIKE 'tidb_enable_check_constraint';", { query: true }).stdout.trim().split(/\s+/)[1];
+  if (now?.toUpperCase() === 'ON') return;
+  const r = q('SET GLOBAL tidb_enable_check_constraint = ON;', { database: false });
+  if (!r.ok) console.warn('WARNING: this TiDB does not allow turning CHECK constraints on (tidb_enable_check_constraint is OFF). The tables are created, but CHECK rules are not enforced by the database; the API validates the same rules.');
+}
+
 if (command === 'up') {
   ensureDatabase();
   const all = listMigrations(migrationsDir);
   const { pending, problems } = planMigrations(all, appliedRows());
   if (problems.length) fail(problems.join('\n'));
   if (!pending.length) console.log(`Database ${config.database} is up to date (${all.length} migrations).`);
+  const tidb = isTidb(q('SELECT VERSION();', { query: true }).stdout);
+  if (tidb && pending.length) prepareTidb();
   for (const m of pending) {
     process.stdout.write(`Applying ${m.file} ... `);
+    if (tidb && needsTriggers(m.sql)) {
+      // TiDB has no triggers: the append-only protection there is the app user's permissions (npm run db:app-user:prod)
+      console.log('skipped (TiDB has no triggers; history is protected by the app database user having no UPDATE or DELETE on it)');
+      must(q(`INSERT INTO schema_migrations (version, name, checksum) VALUES (${m.version}, '${m.name}', '${m.checksum}');`), `Recording ${m.file}`);
+      continue;
+    }
     const r = q(m.sql);
     if (!r.ok) fail(`FAILED\n${r.stderr}\nNothing after ${m.file} was applied. Fix the problem, then run the command again.`);
     must(q(`INSERT INTO schema_migrations (version, name, checksum) VALUES (${m.version}, '${m.name}', '${m.checksum}');`), `Recording ${m.file}`);

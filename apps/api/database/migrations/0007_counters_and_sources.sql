@@ -15,8 +15,8 @@ CREATE TABLE organisation_counter (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
 -- NULL for incidents created in the product. Several NULLs are allowed in a unique key, so only imported rows are constrained.
-ALTER TABLE incident
-  ADD COLUMN source_system VARCHAR(30) NULL AFTER resolved_at,
-  ADD COLUMN source_id     VARCHAR(40) NULL AFTER source_system,
-  ADD UNIQUE KEY uq_incident_source (organisation_id, source_system, source_id),
-  ADD CONSTRAINT ck_incident_source_pair CHECK ((source_system IS NULL) = (source_id IS NULL));
+-- One change per ALTER statement: TiDB (production) does not allow every mix of changes in a single statement.
+ALTER TABLE incident ADD COLUMN source_system VARCHAR(30) NULL AFTER resolved_at;
+ALTER TABLE incident ADD COLUMN source_id     VARCHAR(40) NULL AFTER source_system;
+ALTER TABLE incident ADD UNIQUE KEY uq_incident_source (organisation_id, source_system, source_id);
+ALTER TABLE incident ADD CONSTRAINT ck_incident_source_pair CHECK ((source_system IS NULL) = (source_id IS NULL));

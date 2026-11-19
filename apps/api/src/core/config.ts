@@ -20,6 +20,8 @@ export interface AuthConfig {
 
 export interface AppConfig {
   port: number;
+  /** The address to listen on: this computer only while developing, every address in production (the host's proxy needs that). */
+  host: string;
   db: DbConfig;
   nodeEnv: string;
   auth: AuthConfig;
@@ -55,7 +57,10 @@ export function readAuthConfig(env: Record<string, string | undefined>): AuthCon
 }
 
 export function readAppConfig(env: Record<string, string | undefined>): AppConfig {
-  const port = Number(env.API_PORT ?? 3001);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`API_PORT must be a port number, got "${env.API_PORT}".`);
-  return { port, db: readDbConfig(env), nodeEnv: env.NODE_ENV ?? 'development', auth: readAuthConfig(env) };
+  // API_PORT is the setting for local use; PORT is what hosting services such as Render hand to the app.
+  const rawPort = env.API_PORT ?? env.PORT ?? 3001;
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`API_PORT (or PORT) must be a port number, got "${rawPort}".`);
+  const nodeEnv = env.NODE_ENV ?? 'development';
+  return { port, host: env.HOST || (nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1'), db: readDbConfig(env), nodeEnv, auth: readAuthConfig(env) };
 }

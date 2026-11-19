@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=20.12"
+    "node": ">=22.12 <25"
   },
   "workspaces": [
     "apps/*",
@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "start": "npm run start -w @aravalli/api",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -28,6 +29,12 @@
     "data:download": "npm run data:download -w @aravalli/api",
     "import:uci": "npm run import:uci -w @aravalli/api",
     "import:osha": "npm run import:osha -w @aravalli/api",
+    "db:migrate:prod": "npm run db:migrate:prod -w @aravalli/api",
+    "db:status:prod": "npm run db:status:prod -w @aravalli/api",
+    "db:app-user:prod": "npm run db:app-user:prod -w @aravalli/api",
+    "db:verify:prod": "npm run db:verify:prod -w @aravalli/api",
+    "import:uci:prod": "npm run import:uci:prod -w @aravalli/api",
+    "import:osha:prod": "npm run import:osha:prod -w @aravalli/api",
     "perf": "npm run perf -w @aravalli/api"
   },
   "devDependencies": {

@@ -14,7 +14,7 @@ browser keeps no business data and no token in storage. API documentation is at 
 
 ## Quick start
 
-Requires Node 20.12 or newer and MySQL 8.0.16 or newer (installed locally, or `docker compose up -d db`).
+Requires Node 22.12 or newer and MySQL 8.0.16 or newer (installed locally, or `docker compose up -d db`).
 
 ```
 npm install
@@ -22,8 +22,8 @@ copy .env.example .env      # then fill in your own database values; .env is nev
 npm run db:migrate          # create the tables
 npm run db:seed             # the small fictional sample organisation (used by the tests)
 npm run data:download       # the UCI dataset (OSHA is a manual download, see "Data sources")
-npm run import:uci          # Meridian IT Services: ~24,800 real tickets
-npm run import:osha         # Ironbridge Manufacturing Group: ~5,500 real OSHA records
+npm run import:uci          # "UCI ServiceNow Incident Log": ~24,800 real tickets
+npm run import:osha         # "OSHA Severe Injury Reports": ~5,500 real OSHA records
 npm run dev                 # web http://localhost:5173, API http://localhost:3001, API docs http://localhost:3001/api/docs
 ```
 
@@ -53,14 +53,17 @@ On the sign-in page, under "Try a demonstration organisation", with `DEMO_LOGINS
 
 | Organisation | Roles | Source |
 | --- | --- | --- |
-| **Meridian IT Services** (IT service desk, ~24,800 incidents) | Org Admin, Risk Officer, Department Head (Service Desk), Auditor, Employee | UCI ServiceNow incident log |
-| **Ironbridge Manufacturing Group** (many plants, ~5,500 incidents) | the same five roles (Department Head of Production) | OSHA Severe Injury Reports |
+| **UCI ServiceNow Incident Log · anonymised IT company** (slug `uci-servicenow`, ~24,800 incidents) | Org Admin, Risk Officer, Department Head (Service Desk), Auditor, Employee | UCI ServiceNow incident log |
+| **OSHA Severe Injury Reports · US manufacturing 2024–2025** (slug `osha-manufacturing`, ~5,500 incidents) | the same five roles (Department Head of Production) | OSHA Severe Injury Reports |
+
+The two organisations are named after their real sources on purpose: they are not customers and not real companies. Their staff have
+role-style names ("Plant Safety Officer", "Production Supervisor 1", "Service Desk Analyst 2"), never invented personal names.
 
 Demo accounts have a random password nobody knows; they can only be entered through the demo login.
 
 ## Data sources and credits
 
-Incidents in the two demonstration organisations are **real public records**. The companies, staff names and risk registers are invented.
+Incidents in the two demonstration organisations are **real public records**. Everything around them was made for the demo: the staff accounts (role titles, not people) and the risk registers ("Sample risk register written for this demo, linked to real incidents"). Each organisation shows a short source note inside the app (its source with a link, what was changed, what was added); it is stored in `organisation.data_note` and written by the importers. Every imported incident keeps its original source ID and original date, shown on the incident page.
 
 * **UCI Machine Learning Repository: "Incident management process enriched event log"** (an anonymised ServiceNow log), licence
   **CC BY 4.0**. Amaral, C. A. L., Fantinato, M., Peres, S. M. *Incident management process enriched event log.* UCI Machine Learning
@@ -70,14 +73,14 @@ Incidents in the two demonstration organisations are **real public records**. Th
   https://www.osha.gov/severe-injury-reports (federal OSHA jurisdiction only; January 2015 to November 2025). The page states no
   licence or copyright terms (checked on 3 November 2026); it says only that the data "will be updated periodically and represent
   incidents under federal OSHA jurisdiction only". OSHA's site refused scripted downloads, so the CSV is downloaded by hand from that
-  page and saved as `data/raw/osha-severe-injury.csv` (git-ignored, never committed). **Ironbridge's incidents come from real OSHA
+  page and saved as `data/raw/osha-severe-injury.csv` (git-ignored, never committed). **the OSHA organisation's incidents come from real OSHA
   records across many different US manufacturers**; no single company had them all, and employer names and addresses are not imported.
 
 `data/sources.json` records the URL, licence, download date, size and SHA-256 of each file.
 
 ### How the data is mapped (decisions)
 
-| | UCI ServiceNow log → Meridian IT Services | OSHA → Ironbridge Manufacturing Group |
+| | UCI ServiceNow log → "UCI ServiceNow Incident Log" | OSHA → "OSHA Severe Injury Reports" |
 | --- | --- | --- |
 | Rows | 141,712 events → 24,802 incidents | manufacturing (NAICS 31/32/33), 2024 to Nov 2025: **5,481** |
 | State | Rebuilt **as of 10 Jan 2017** (a date inside the log): 51 tickets still Open/Investigating/Contained/Resolved, the rest Closed. Tickets opened after the cut-off are left out | Records from 1 Oct 2025 on are still open; 1 Aug to 30 Sep a mix of Resolved and Closed; older are Closed |
@@ -96,6 +99,35 @@ The importers are idempotent (re-running adds nothing; a duplicate would be a lo
 purpose bypassing the incident state machine, because an imported record arrives already in the state its source ended in.
 Each organisation also has a hand-written risk register (8 and 9 risks, with two assessments each) linked to imported incidents by a stated rule.
 
+## Reloading the development database (after the honest-data rename)
+
+The two demonstration organisations were renamed after their sources and their staff got role-style names, so an old development database
+must be rebuilt (the importers are idempotent, but they key organisations by slug, and the slugs changed). Stop `npm run dev` first, then:
+
+```
+npm run db:reset -w @aravalli/api -- --yes
+npm run db:migrate
+npm run import:uci
+npm run import:osha
+npm run dev
+```
+
+(`db:reset` only drops databases whose name contains `dev` or `test`. The small sample organisation from `npm run db:seed` is for the tests
+and is not needed for the demo.)
+
+## Putting it online
+
+One free Render web service runs the API and serves the built web app from the same address; the database is a free TiDB Cloud Starter
+cluster (MySQL-compatible, reached over TLS). Local development stays on MySQL 8. Step by step, for a beginner:
+[`docs/DEPLOY-RENDER.md`](docs/DEPLOY-RENDER.md). In production mode (`NODE_ENV=production`) the API serves `apps/web/dist`, answers every
+non-`/api` address with `index.html`, trusts one proxy (`trust proxy`), and connects over TLS when `DB_SSL=true`.
+
+TiDB has no triggers, so the append-only history tables (`risk_assessment`, `incident_update`) are protected there by a database permission
+instead: the live app connects as a least-privilege user that may only SELECT and INSERT on them (`npm run db:app-user:prod` creates it
+and proves it). On local MySQL the triggers do the same job. Migrations, imports and checks run from your laptop against TiDB with
+`npm run db:migrate:prod`, `import:uci:prod`, `import:osha:prod`, `db:app-user:prod` and `db:verify:prod`, which read the git-ignored file
+`.env.production` (see `.env.production.example`).
+
 ## Scripts
 
 | Command | What it does |
@@ -107,12 +139,14 @@ Each organisation also has a hand-written risk register (8 and 9 risks, with two
 | `npm run db:migrate`, `db:status`, `db:seed`, `db:reset`, `db:verify` | Database commands, see [`docs/schema.md`](docs/schema.md). |
 | `npm run data:download` | Fetch the UCI dataset into `data/raw/` and record its source and checksum. |
 | `npm run import:uci`, `import:osha` | Load the real data (`-- --all-manufacturing --db aravalli_perf` loads all 34,472 OSHA manufacturing rows for performance tests). |
+| `npm start` | Production mode: the API serving the built web app (`npm run build -w @aravalli/web` first; set `NODE_ENV=production`, `JWT_SECRET`). |
+| `npm run db:migrate:prod`, `db:status:prod`, `import:uci:prod`, `import:osha:prod` | The same, against the database in `.env.production` (TiDB). Also `db:app-user:prod` and `db:verify:prod`. |
 | `npm run perf` | Time the API endpoints (p50/p95), see [`docs/performance.md`](docs/performance.md). |
 
 ## Layout
 
 ```
-apps/web          React app (Vite, Tailwind, Recharts, Motion, React Three Fiber on the landing page), pages, Playwright tests.
+apps/web          React app (Vite, Tailwind, Recharts, Motion, the landing page is plain HTML and CSS, including its 3D landscape), pages, Playwright tests.
 apps/api          API (routes, controllers, services, repositories), migrations, importers, performance script, tests.
 packages/shared   Pure domain logic (no React, no I/O): types, scoring, transitions, validation, the permission map, the clock.
 scripts/          Development helpers.
@@ -130,9 +164,11 @@ account lockout beyond rate limiting, and the in-memory rate limiter resets when
 
 ## Design
 
-Geist (UI) and Geist Mono (IDs and numbers), self-hosted. Off-white and near-black with one accent, safety orange, used only for
-primary actions and Critical risk. Risk bands run light grey, grey, dark, orange, and are always named, never colour alone. Light and
-dark themes follow the system, with a switch. Motion is subtle and switched off when the system asks for reduced motion.
+Geist (UI) and Geist Mono (codes and numbers only), self-hosted. The "Ridge" colours (forest graphite and jade, see `docs/design/Colours.dc.html`):
+light is the app's default (page `#F4F6F5`, panels white, accent `#0F7A5A`), dark is for the landing page and the app's dark mode
+(page `#0B1210`, accent `#3DB58B`). Jade is the brand and is never used for a warning: severity has its own colours (Low grey, Medium amber,
+High orange, Critical red) and is always a dot plus the word. The tokens are in `apps/web/src/styles/tokens.css`. Motion is short CSS
+and is switched off when the system asks for reduced motion.
 
 ## Documents
 
@@ -140,6 +176,7 @@ dark themes follow the system, with a switch. Motion is subtle and switched off 
 - [`docs/api.md`](docs/api.md): the API: layers, errors, paging, code generation, tests.
 - [`docs/schema.md`](docs/schema.md): the database, tenancy, normalisation, lifecycles.
 - [`docs/performance.md`](docs/performance.md): timings on the real data volumes, before and after indexes.
+- [`docs/DEPLOY-RENDER.md`](docs/DEPLOY-RENDER.md): put it online on Render and TiDB Cloud, step by step.
 - [`docs/manual-checklist.md`](docs/manual-checklist.md): test it yourself in the browser.
 - [`docs/INTERVIEW-GUIDE.md`](docs/INTERVIEW-GUIDE.md): how to explain the project.
 - [`docs/db-verification.md`](docs/db-verification.md): proof of the schema on MySQL.

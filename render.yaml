@@ -1,0 +1,41 @@
+# Render Blueprint: ONE free web service that runs the API and serves the built web app from the same address.
+# The MySQL-compatible database is NOT on Render: it is a TiDB Cloud Starter cluster (free), reached over TLS.
+# No secret values are written in this file. Variables marked "sync: false" are typed into the Render dashboard
+# the first time the Blueprint is applied. Full steps: docs/DEPLOY-RENDER.md
+services:
+  - type: web
+    name: aravalli
+    runtime: node
+    plan: free
+    # --include=dev: the build needs TypeScript and Vite, which are development dependencies.
+    buildCommand: npm ci --include=dev && npm run build -w @aravalli/web
+    startCommand: npm run start -w @aravalli/api
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      # production mode: the API also serves apps/web/dist and falls back to index.html for app routes
+      - key: NODE_ENV
+        value: production
+      # signs the 15-minute access tokens; Render makes a long random value for you
+      - key: JWT_SECRET
+        generateValue: true
+      # the two demonstration organisations are public on purpose: the demo buttons let anyone try each role
+      - key: DEMO_LOGINS
+        value: "true"
+      # TiDB Cloud Starter: TLS on, port 4000, a publicly trusted certificate (no certificate file needed)
+      - key: DB_SSL
+        value: "true"
+      - key: DB_PORT
+        value: "4000"
+      # from the TiDB Cloud "Connect" dialog (host, database) and from `npm run db:app-user:prod` (the app user and its password)
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      # the LEAST-PRIVILEGE app user (it cannot update or delete history), NOT the admin "xxxx.root" user
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

@@ -154,3 +154,19 @@ Connection details come from `.env` (copy `.env.example`); nothing is hardcoded.
   public dataset, so any imported incident can be traced to its original record. `UNIQUE (organisation_id, source_system, source_id)`
   makes a repeated import recognise what it has already loaded (several NULLs are allowed in a unique key, so only imported rows are
   constrained), and a CHECK keeps the two columns either both present or both absent.
+
+## TiDB (production) and MySQL (development)
+
+Development and the tests run on MySQL 8. Production runs on TiDB Cloud Starter (MySQL-compatible). The same migrations are used for both,
+with these differences (see also [`DEPLOY-RENDER.md`](DEPLOY-RENDER.md)):
+
+- **Triggers:** TiDB has none. The migration runner skips any migration made of `CREATE TRIGGER` statements (0006) on TiDB. The append-only
+  rule for `risk_assessment` and `incident_update` is then a permission: the app's database user has only SELECT and INSERT on those two
+  tables (`npm run db:app-user:prod` creates it and proves it). The app has no SQL that updates or deletes them (a test checks the source).
+- **CHECK constraints:** enforced on TiDB only when `tidb_enable_check_constraint` is ON. The runner tries to turn it on and warns if it cannot;
+  the API validates the same rules either way.
+- **One change per ALTER statement** in migrations 0007 and 0008, because TiDB does not accept every mix of changes in one statement.
+- **Checks:** `npm run db:verify` (local) and `npm run db:verify:prod` (TiDB). The four trigger checks are reported as `SKIP` on TiDB.
+- Not changed because TiDB supports them: composite foreign keys, the stored generated column `risk_score`, the view with `ROW_NUMBER() OVER`,
+  `LAST_INSERT_ID(expr)` for record codes and `SELECT ... FOR UPDATE`. These could not be run against a real TiDB cluster while this was written,
+  which is why `db:verify:prod` exists.

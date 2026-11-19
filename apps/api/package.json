@@ -18,6 +18,12 @@
     "db:verify": "tsx src/db/verify.ts",
     "import:uci": "tsx scripts/import/import-uci.ts",
     "import:osha": "tsx scripts/import/import-osha.ts",
+    "db:migrate:prod": "tsx --env-file=../../.env.production src/db/migrate.ts up",
+    "db:status:prod": "tsx --env-file=../../.env.production src/db/migrate.ts status",
+    "db:app-user:prod": "tsx --env-file=../../.env.production src/db/app-user.ts",
+    "db:verify:prod": "tsx --env-file=../../.env.production src/db/verify.ts",
+    "import:uci:prod": "tsx --env-file=../../.env.production scripts/import/import-uci.ts",
+    "import:osha:prod": "tsx --env-file=../../.env.production scripts/import/import-osha.ts",
     "perf": "tsx scripts/perf.ts"
   },
   "dependencies": {

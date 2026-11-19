@@ -7,10 +7,11 @@ import { createPool } from './core/db';
 loadEnvFile();
 const config = readAppConfig(process.env);
 const pool = createPool(config.db);
-const app = createApp({ pool, clock: systemClock, auth: config.auth });
+const app = createApp({ pool, clock: systemClock, auth: config.auth, serveWeb: config.nodeEnv === 'production' });
 
-const server = app.listen(config.port, '127.0.0.1', () => {
-  console.log(`Aravalli API  http://127.0.0.1:${config.port}   docs: http://127.0.0.1:${config.port}/api/docs`);
+const server = app.listen(config.port, config.host, () => {
+  console.log(`Aravalli API  http://${config.host}:${config.port}   docs: http://${config.host}:${config.port}/api/docs`);
+  if (config.nodeEnv === 'production') console.log('Production mode: this server also serves the built web app (apps/web/dist).');
   if (config.auth.demoLogins) console.log('Demo logins are ON (DEMO_LOGINS=true): anyone who can reach this server can sign in as a demo user.');
 });
 
