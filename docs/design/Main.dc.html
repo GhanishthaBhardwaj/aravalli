@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aravalli landing page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B1210}
+a{color:#E8EFEB}a:hover{color:#FFFFFF}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.navlinks{display:flex;gap:28px}
+.four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.feat{display:flex;gap:64px;align-items:center;flex-wrap:wrap}
+.feat.rev{flex-direction:row-reverse}
+.shotgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.shotmid{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px}
+.btn{transition:transform .12s ease,background-color .2s ease,border-color .2s ease}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(1px) scale(.98)}
+.rolebtn{transition:background-color .2s ease,border-color .2s ease}
+.rolebtn:hover{background:#1E2D28;border-color:rgba(190,230,210,.35)}
+button:focus-visible,a:focus-visible{outline:2px solid #3DB58B;outline-offset:3px}
+
+@keyframes blink{50%{opacity:0}}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(-36px,14px)}}
+@keyframes dawn{from{opacity:.08}to{opacity:1}}
+@keyframes navbg{from{background:rgba(11,18,16,0);border-color:rgba(190,230,210,0)}to{background:rgba(11,18,16,.86);border-color:rgba(190,230,210,.1)}}
+@keyframes rise{from{opacity:0;transform:translateY(70px) perspective(1400px) rotateX(14deg)}to{opacity:1;transform:none}}
+@keyframes appear{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes lit{from{background:#17231F;border-color:rgba(190,230,210,.25)}to{background:#3DB58B;border-color:#3DB58B}}
+@keyframes fill{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+
+@keyframes spin{from{transform:rotateZ(-4deg)}to{transform:rotateZ(5deg)}}
+.spin{animation:spin 16s ease-in-out infinite alternate}
+@media (max-width:760px){.terrainwrap{display:none!important}}
+.cursor{display:inline-block;width:.07em;height:.9em;margin-left:.06em;vertical-align:-.06em;background:#3DB58B;animation:blink 1s steps(1) infinite}
+.drift{animation:drift 38s ease-in-out infinite alternate}
+.dawn{animation:dawn 2.6s ease-out both}
+.navbar{border-bottom:1px solid rgba(190,230,210,.1);background:rgba(11,18,16,.86)}
+
+@supports (animation-timeline: view()){
+ .navbar{animation:navbg linear both;animation-timeline:scroll(root);animation-range:0 160px}
+ .rise{animation:rise linear both;animation-timeline:view();animation-range:entry 0% cover 40%}
+ .appear{animation:appear linear both;animation-timeline:view()}
+ .draw{transform-origin:left center;animation:draw linear both;animation-timeline:view();animation-range:entry 30% cover 55%}
+ .lit{animation:lit linear both;animation-timeline:view()}
+ .fill{animation:fill linear both;animation-timeline:view()}
+ .grow{transform-origin:left center;animation:draw linear both;animation-timeline:view()}
+}
+@media (prefers-reduced-motion:reduce){
+ .spin,.drift,.dawn,.cursor,.navbar,.rise,.appear,.draw,.lit,.fill,.grow{animation:none!important;opacity:1!important;transform:none!important}
+}
+@media (max-width:960px){
+ .navlinks{display:none}
+ .four,.three,.two{grid-template-columns:1fr}
+ .feat,.feat.rev{flex-direction:column;align-items:stretch;gap:28px}
+ .shotgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .shotmid{grid-template-columns:1fr}
+ .herohead{font-size:48px!important}
+}
+</style>
+</helmet>
+<div style="background: #0B1210; color: #E8EFEB; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased">
+
+<header class="navbar" style="position: sticky; top: 0; z-index: 5; backdrop-filter: blur(12px)">
+<div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 28px">
+<a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; font-size: 18px; margin-right: auto">
+<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 19l6.5-10 4 6 3-4.5L22 19H2z" fill="{{accent}}"></path></svg>Aravalli</a>
+<nav class="navlinks" aria-label="Main" style="font-size: 14.5px">
+<a href="#features" style="text-decoration: none; color: #A9B8B1">Features</a>
+<a href="#how" style="text-decoration: none; color: #A9B8B1">How it works</a>
+<a href="#demo" style="text-decoration: none; color: #A9B8B1">Demo</a>
+<a href="#faq" style="text-decoration: none; color: #A9B8B1">FAQ</a>
+</nav>
+<a href="Login.dc.html" style="text-decoration: none; font-size: 14.5px">Log in</a>
+<a class="btn" href="Login.dc.html" style="text-decoration: none; font-size: 14.5px; font-weight: 600; background: #E8EFEB; color: #0B1210; padding: 10px 16px; border-radius: 9px">Start free</a>
+</div>
+</header>
+
+<section id="top" style="position: relative; overflow: hidden; isolation: isolate; padding: 120px 0 0; margin-top: -63px">
+<svg viewBox="0 0 1440 860" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 860px; z-index: -1">
+<defs>
+<radialGradient id="dawnlight" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#F4D9A6" stop-opacity="0.28"></stop><stop offset="0.45" stop-color="{{accent}}" stop-opacity="0.12"></stop><stop offset="1" stop-color="{{accent}}" stop-opacity="0"></stop></radialGradient>
+<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#0B1210" stop-opacity="0"></stop><stop offset="1" stop-color="#0B1210" stop-opacity="1"></stop></linearGradient>
+</defs>
+<circle class="dawn" cx="1090" cy="250" r="360" fill="url(#dawnlight)"></circle>
+<g class="drift" fill="none" stroke="#A0D7BE" stroke-opacity="0.07" stroke-width="1">
+<sc-for list="{{contours}}" as="c" hint-placeholder-count="20"><path d="{{c.d}}"></path></sc-for>
+</g>
+<rect x="0" y="0" width="1440" height="860" fill="url(#fade)"></rect>
+</svg>
+<div onMouseMove="{{onMove}}" onMouseLeave="{{onLeave}}" style="max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 24px 32px">
+<div style="flex: 1 1 560px; display: flex; flex-direction: column; align-items: flex-start; gap: 24px">
+<h1 class="herohead" aria-label="See the next risk before it becomes an incident." style="margin: 0; font-size: 62px; line-height: 1.06; letter-spacing: -0.028em; font-weight: 600; max-width: 17ch; min-height: 2.15em"><span aria-hidden="true">{{typed}}</span><sc-if value="{{showCursor}}" hint-placeholder-val="{{true}}"><span class="cursor" aria-hidden="true"></span></sc-if></h1>
+<p style="margin: 0; font-size: 19px; color: #A9B8B1; max-width: 56ch">Aravalli is where a company writes down what could go wrong, reports what did, and follows each incident until it is closed. Each person sees only their own work.</p>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center">
+<a class="btn" href="Login.dc.html" style="text-decoration: none; background: {{accent}}; color: {{onAccent}}; font-weight: 600; font-size: 15.5px; padding: 14px 22px; border-radius: 11px">Start free</a>
+<a class="btn" href="#demo" style="text-decoration: none; border: 1px solid rgba(190,230,210,0.24); font-weight: 550; font-size: 15.5px; padding: 14px 22px; border-radius: 11px">Try the live demo</a>
+</div>
+</div>
+<div class="terrainwrap" aria-hidden="true" style="flex: 1 1 420px; height: 440px; perspective: 1100px; display: flex; align-items: center; justify-content: center">
+<div style="width: 420px; height: 420px; position: relative; transform-style: preserve-3d; transform: rotateX({{tiltX}}deg) rotateZ({{tiltZ}}deg); transition: transform .9s cubic-bezier(.2,.7,.2,1)">
+<div class="spin" style="position: absolute; left: 0; top: 0; width: 420px; height: 420px; transform-style: preserve-3d">
+<sc-for list="{{terrain}}" as="r" hint-placeholder-count="20"><svg viewBox="0 0 420 420" width="420" height="420" style="position: absolute; left: 0; top: 0; overflow: visible; transform: translateZ({{r.z}}px)"><path d="{{r.d}}" fill="rgba(160,215,190,0.035)" stroke="#A0D7BE" stroke-opacity="{{r.op}}" stroke-width="1.1"></path></svg></sc-for>
+<sc-for list="{{pins}}" as="p" hint-placeholder-count="6">
+<div style="position: absolute; left: {{p.x}}px; top: {{p.y}}px; width: 0; height: 0; transform-style: preserve-3d; transform: translateZ({{p.z}}px)">
+<div style="position: absolute; left: -1px; bottom: 0; width: 2px; height: {{p.h}}px; background: linear-gradient(to top, rgba(0,0,0,0), {{p.c}}); transform-origin: 50% 100%; transform: rotateX(-90deg)"></div>
+<div style="position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: {{p.c}}; box-shadow: 0 0 0 4px {{p.ring}}; transform: translateZ({{p.h}}px) rotateX(-90deg)"></div>
+<sc-if value="{{p.label}}" hint-placeholder-val="{{false}}"><div class="mono" style="position: absolute; left: 14px; top: -10px; white-space: nowrap; font-size: 12px; color: #E8EFEB; background: rgba(17,26,23,0.9); border: 1px solid rgba(190,230,210,0.2); padding: 3px 8px; border-radius: 6px; transform: translateZ({{p.h}}px) rotateX(-90deg)">{{p.label}}</div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<figure class="rise" style="max-width: 1200px; margin: 80px auto 0; padding: 0 24px">
+<div style="background: #F4F6F5; color: #0F1A16; border-radius: 16px 16px 0 0; border: 1px solid rgba(190,230,210,0.25); border-bottom: 0; overflow: hidden; box-shadow: 0 -40px 120px -60px rgba(244,217,166,0.35)">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #E9EEEC; border-bottom: 1px solid #DCE3E0">
+<span style="width: 10px; height: 10px; border-radius: 50%; background: #C9D2CE"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #C9D2CE"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #C9D2CE"></span>
+<span class="mono" style="margin-left: 12px; font-size: 12px; color: #56665F">aravalli / overview</span>
+</div>
+<div style="padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div><div style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em">Overview</div><div style="font-size: 13px; color: #56665F">Ironbridge Manufacturing Group · 5,481 incidents on record</div></div>
+<span style="font-size: 13px; font-weight: 600; background: #0F7A5A; color: #FFFFFF; padding: 8px 12px; border-radius: 9px">Report incident</span>
+</div>
+<div class="shotgrid">
+<sc-for list="{{shotKpis}}" as="k" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border: 1px solid #DCE3E0; border-radius: 12px; padding: 12px 14px"><div style="font-size: 12px; color: #56665F">{{k.label}}</div><div class="mono" style="font-size: 24px; font-weight: 600; letter-spacing: -0.02em">{{k.value}}</div></div>
+</sc-for>
+</div>
+<div class="shotmid">
+<div style="background: #FFFFFF; border: 1px solid #DCE3E0; border-radius: 12px; padding: 12px">
+<div style="font-size: 12.5px; font-weight: 600; margin-bottom: 8px">Risk heat map</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px">
+<sc-for list="{{heatLight}}" as="h" hint-placeholder-count="25"><div class="mono" style="aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; background: {{h.bg}}">{{h.n}}</div></sc-for>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #DCE3E0; border-radius: 12px; padding: 6px 14px">
+<sc-for list="{{shotRows}}" as="r" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EBF0EE; font-size: 13px">
+<span class="mono" style="color: #56665F; font-size: 12px; width: 70px; flex: none">{{r.code}}</span>
+<span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; color: {{r.fg}}; background: {{r.bg}}"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{r.dot}}"></span>{{r.sev}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</figure>
+</section>
+
+<section aria-label="The problem" style="background: #0E1714; border-top: 1px solid rgba(190,230,210,0.08); border-bottom: 1px solid rgba(190,230,210,0.08)">
+<div style="max-width: 1200px; margin: 0 auto; padding: 104px 24px; display: flex; gap: 48px 72px; flex-wrap: wrap; align-items: flex-start">
+<p class="appear" style="flex: 1 1 520px; margin: 0; font-size: 30px; line-height: 1.35; letter-spacing: -0.015em; font-weight: 500; animation-range: entry 10% cover 35%">In January 2025, a worker in Texas was repairing the chain of a packing machine when it was switched on. He lost the tip of his finger.</p>
+<div class="appear" style="flex: 1 1 380px; display: flex; flex-direction: column; gap: 14px; color: #A9B8B1; font-size: 16.5px; animation-range: entry 25% cover 45%">
+<p style="margin: 0">It was reported to OSHA, like thousands of injuries every year. In most companies the risk behind it, a machine that can start during repairs, sits in a spreadsheet that nobody opens.</p>
+<p style="margin: 0; color: #E8EFEB">Aravalli gives that risk an owner, a score and a review date, and links the next incident straight back to it.</p>
+<p style="margin: 0; font-size: 13.5px; color: #93A69D">From OSHA severe injury report 2025010024.</p>
+</div>
+</div>
+</section>
+
+<section id="how" style="max-width: 1200px; margin: 0 auto; padding: 128px 24px 0">
+<h2 style="margin: 0 0 12px; font-size: 36px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 600">How it works</h2>
+<div style="height: 40px"></div>
+<div style="position: relative">
+<div aria-hidden="true" style="position: absolute; left: 9px; right: 9px; top: 9px; height: 2px; background: rgba(190,230,210,0.14)"></div>
+<div class="draw" aria-hidden="true" style="position: absolute; left: 9px; right: 9px; top: 9px; height: 2px; background: {{accent}}"></div>
+<ol class="four" style="list-style: none; margin: 0; padding: 0; position: relative">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+<li style="display: flex; flex-direction: column; gap: 10px">
+<span class="lit" aria-hidden="true" style="width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(190,230,210,0.25); background: #17231F; animation-range: {{s.range}}"></span>
+<span style="font-size: 14px; color: #93A69D; margin-top: 8px">{{s.n}}</span>
+<span style="font-size: 19px; font-weight: 600">{{s.title}}</span>
+<span style="color: #A9B8B1; font-size: 15px">{{s.text}}</span>
+</li>
+</sc-for>
+</ol>
+</div>
+</section>
+
+<section id="features" style="max-width: 1200px; margin: 0 auto; padding: 104px 24px 0; display: flex; flex-direction: column; gap: 112px">
+
+<div class="feat">
+<div style="flex: 1 1 380px; min-width: 0">
+<h3 style="margin: 0 0 10px; font-size: 26px; letter-spacing: -0.018em; line-height: 1.25; font-weight: 600">Know which risks matter most</h3>
+<p style="margin: 0; color: #A9B8B1">Every risk gets an owner and a score from 1 to 25, likelihood times impact. The heat map shows where the dangerous ones sit, and old scores stay in the history so you can see whether a risk is getting better.</p>
+</div>
+<div style="flex: 1 1 480px; min-width: 0; background: #111A17; border: 1px solid rgba(190,230,210,0.12); border-radius: 18px; padding: 28px; display: flex; gap: 12px; align-items: center; justify-content: center">
+<span style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12.5px; color: #93A69D">Likelihood</span>
+<div>
+<div style="display: grid; grid-template-columns: repeat(5, 54px); gap: 6px" role="img" aria-label="Example 5 by 5 risk heat map">
+<sc-for list="{{heat}}" as="h" hint-placeholder-count="25"><div class="fill mono" style="width: 54px; height: 54px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; background: {{h.bg}}; animation-range: {{h.range}}">{{h.n}}</div></sc-for>
+</div>
+<div style="text-align: center; font-size: 12.5px; color: #93A69D; margin-top: 8px">Impact</div>
+</div>
+</div>
+</div>
+
+<div class="feat rev">
+<div style="flex: 1 1 380px; min-width: 0">
+<h3 style="margin: 0 0 10px; font-size: 26px; letter-spacing: -0.018em; line-height: 1.25; font-weight: 600">Follow every incident to the end</h3>
+<p style="margin: 0; color: #A9B8B1">Anyone can report what happened. Someone is made responsible, the harm is contained, the cause is fixed, and each step lands on a timeline that can't be edited later.</p>
+</div>
+<div style="flex: 1 1 480px; min-width: 0; background: #111A17; border: 1px solid rgba(190,230,210,0.12); border-radius: 18px; padding: 28px">
+<div style="font-size: 15px; font-weight: 600">INC-4812 · Finger caught in packing machine chain</div>
+<div style="font-size: 12.5px; color: #93A69D; margin-bottom: 20px">Maintenance · example timeline</div>
+<ol style="list-style: none; margin: 0; padding: 0 0 0 20px; border-left: 1px solid rgba(190,230,210,0.2); display: flex; flex-direction: column; gap: 16px">
+<sc-for list="{{timeline}}" as="e" hint-placeholder-count="5">
+<li class="appear" style="animation-range: {{e.range}}"><span class="mono" style="font-size: 12px; color: #93A69D">{{e.time}}</span><div style="font-size: 15px; color: {{e.color}}">{{e.text}}</div></li>
+</sc-for>
+</ol>
+</div>
+</div>
+
+<div class="feat">
+<div style="flex: 1 1 380px; min-width: 0">
+<h3 style="margin: 0 0 10px; font-size: 26px; letter-spacing: -0.018em; line-height: 1.25; font-weight: 600">Everyone sees only their own work</h3>
+<p style="margin: 0 0 16px; color: #A9B8B1">Five roles, checked by the server on every request. Each company's data is kept apart, and the database refuses any link between two companies.</p>
+</div>
+<div style="flex: 1 1 480px; min-width: 0; border-top: 1px solid rgba(190,230,210,0.16)">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="5">
+<div class="appear" style="display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(190,230,210,0.08); animation-range: {{r.range}}"><span style="font-weight: 600">{{r.name}}</span><span style="color: #A9B8B1; text-align: right">{{r.sees}}</span></div>
+</sc-for>
+</div>
+</div>
+
+<div class="feat rev">
+<div style="flex: 1 1 380px; min-width: 0">
+<h3 style="margin: 0 0 10px; font-size: 26px; letter-spacing: -0.018em; line-height: 1.25; font-weight: 600">Reports you can hand to management</h3>
+<p style="margin: 0 0 16px; color: #A9B8B1">See which departments carry the most risk and how quickly incidents are resolved. Export to CSV or print.</p>
+</div>
+<div style="flex: 1 1 480px; min-width: 0; background: #111A17; border: 1px solid rgba(190,230,210,0.12); border-radius: 18px; padding: 28px">
+<div style="font-size: 15px; font-weight: 600; margin-bottom: 18px">Highest risk score by department <span style="font-weight: 400; color: #93A69D; font-size: 12.5px">example</span></div>
+<div style="display: flex; flex-direction: column; gap: 14px">
+<sc-for list="{{depts}}" as="d" hint-placeholder-count="5">
+<div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px; gap: 12px; align-items: center; font-size: 14px">
+<span>{{d.name}}</span>
+<div style="height: 10px; border-radius: 5px; background: #17231F; overflow: hidden"><div class="grow" style="height: 10px; border-radius: 5px; width: {{d.w}}; background: {{d.color}}; animation-range: {{d.range}}"></div></div>
+<span class="mono" style="text-align: right; color: #C8D4CE">{{d.score}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+<section aria-label="Real data" style="max-width: 1200px; margin: 0 auto; padding: 104px 24px 0">
+<h2 style="margin: 0 0 12px; font-size: 36px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 600">Built on real incidents</h2>
+<p style="margin: 0 0 36px; color: #A9B8B1; font-size: 17px; max-width: 60ch">The two demo companies are filled with public records, so the app is tested at a real company's volume, not on a handful of made-up rows.</p>
+<div class="three" style="margin-bottom: 40px">
+<div style="border-top: 1px solid rgba(190,230,210,0.2); padding-top: 18px"><div class="mono" style="font-size: 52px; font-weight: 600; letter-spacing: -0.04em; line-height: 1">{{n1}}</div><div style="color: #A9B8B1; margin-top: 8px">IT tickets from a real ServiceNow log</div></div>
+<div style="border-top: 1px solid rgba(190,230,210,0.2); padding-top: 18px"><div class="mono" style="font-size: 52px; font-weight: 600; letter-spacing: -0.04em; line-height: 1">{{n2}}</div><div style="color: #A9B8B1; margin-top: 8px">workplace injury reports filed with OSHA</div></div>
+<div style="border-top: 1px solid rgba(190,230,210,0.2); padding-top: 18px"><div class="mono" style="font-size: 52px; font-weight: 600; letter-spacing: -0.04em; line-height: 1">{{n3}}</div><div style="color: #A9B8B1; margin-top: 8px">ms to load the incident list on 25,000 rows</div></div>
+</div>
+<p style="margin: 0; font-size: 14px; color: #93A69D; max-width: 70ch">Sources: OSHA Severe Injury Reports (US Department of Labor) and the UCI incident management event log (CC BY 4.0). Company and staff names are invented, and dates are shifted.</p>
+</section>
+
+<section id="demo" style="max-width: 1200px; margin: 0 auto; padding: 104px 24px 0">
+<h2 style="margin: 0 0 12px; font-size: 36px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 600">Open a demo company</h2>
+<p style="margin: 0 0 32px; color: #A9B8B1; font-size: 17px; max-width: 60ch">Pick a role to sign in as that person. You don't need an account.</p>
+<div class="two">
+<sc-for list="{{orgs}}" as="o" hint-placeholder-count="2">
+<article style="background: #111A17; border: 1px solid rgba(190,230,210,0.12); border-radius: 18px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+<div><h3 style="margin: 0 0 4px; font-size: 22px; letter-spacing: -0.02em">{{o.name}}</h3><div style="color: #A9B8B1; font-size: 15px">{{o.text}}</div></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{roleNames}}" as="rn" hint-placeholder-count="5"><a class="rolebtn" href="Overview.dc.html" style="text-decoration: none; font-size: 14px; font-weight: 550; padding: 10px 14px; border-radius: 9px; border: 1px solid rgba(190,230,210,0.18); background: #17231F">{{rn}}</a></sc-for>
+</div>
+</article>
+</sc-for>
+</div>
+</section>
+
+<section id="faq" style="max-width: 1200px; margin: 0 auto; padding: 104px 24px 0; display: flex; gap: 56px; flex-wrap: wrap">
+<div style="flex: 1 1 280px"><h2 style="margin: 0; font-size: 36px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 600">Questions</h2></div>
+<div style="flex: 2 1 560px; display: flex; flex-direction: column">
+<sc-for list="{{faqs}}" as="f" hint-placeholder-count="5">
+<div style="border-top: 1px solid rgba(190,230,210,0.12)">
+<button type="button" onClick="{{f.toggle}}" aria-expanded="{{f.expanded}}" style="font: inherit; width: 100%; min-height: 60px; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: none; border: 0; color: #E8EFEB; font-size: 17px; font-weight: 550; text-align: left; cursor: pointer; padding: 16px 0">{{f.q}}<span aria-hidden="true" style="color: #93A69D; font-size: 22px; transition: transform .2s ease; transform: {{f.rot}}">+</span></button>
+<sc-if value="{{f.open}}" hint-placeholder-val="{{false}}"><p class="faqa" style="margin: 0 0 20px; color: #A9B8B1; max-width: 64ch">{{f.a}}</p></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="position: relative; overflow: hidden; isolation: isolate; margin-top: 120px; padding: 112px 24px 104px; border-top: 1px solid rgba(190,230,210,0.08)">
+<svg viewBox="0 0 1440 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1">
+<circle cx="720" cy="620" r="460" fill="url(#dawnlight)"></circle>
+<g class="drift" fill="none" stroke="#A0D7BE" stroke-opacity="0.11"><sc-for list="{{ctaContours}}" as="c" hint-placeholder-count="10"><path d="{{c.d}}"></path></sc-for></g>
+</svg>
+<div style="max-width: 1200px; margin: 0 auto">
+<h2 style="margin: 0 0 14px; font-size: 44px; line-height: 1.1; letter-spacing: -0.025em; font-weight: 600; max-width: 18ch">Set up Aravalli for your company.</h2>
+<p style="margin: 0 0 28px; color: #A9B8B1; font-size: 17px; max-width: 46ch">It takes a few minutes. You become the admin, then add your departments and people.</p>
+<a class="btn" href="Login.dc.html" style="display: inline-block; text-decoration: none; background: {{accent}}; color: {{onAccent}}; font-weight: 600; padding: 15px 24px; border-radius: 12px">Create your company</a>
+</div>
+</section>
+
+<footer style="border-top: 1px solid rgba(190,230,210,0.08)">
+<div style="max-width: 1200px; margin: 0 auto; padding: 36px 24px; display: flex; flex-wrap: wrap; gap: 14px 40px; font-size: 13.5px; color: #93A69D; align-items: center">
+<span style="display: flex; align-items: center; gap: 8px; color: #E8EFEB; font-weight: 650"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 19l6.5-10 4 6 3-4.5L22 19H2z" fill="{{accent}}"></path></svg>Aravalli</span>
+<span>Demo companies use real public incident records with invented company and staff names. Dates are shifted.</span>
+<span style="margin-left: auto">Data: OSHA Severe Injury Reports · UCI incident event log (CC BY 4.0)</span>
+</div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3DB58B","options":["#3DB58B","#2BB3C0","#F2620F","#7C5CFF"]},"$preview":{"width":1440,"height":5600}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.full = 'See the next risk before it becomes an incident.';
+    this.state = { typedLen: 0, cursor: true, count: 0, open: 0, mx: 0, my: 0 };
+    this.reduce = false;
+  }
+  terrainRings() {
+    var peaks = [{ x: 245, y: 185, r: 190, n: 12, step: 8, k: 3, p: 0.6 }, { x: 125, y: 300, r: 105, n: 7, step: 7, k: 4, p: 2.1 }];
+    var out = [];
+    peaks.forEach(function (P) {
+      for (var L = 0; L < P.n; L++) {
+        var d = '';
+        for (var s = 0; s <= 72; s++) {
+          var a = (s / 72) * Math.PI * 2;
+          var wob = 1 + 0.14 * Math.sin(P.k * a + P.p + L * 0.5) + 0.06 * Math.sin((P.k + 2) * a - L * 0.3);
+          var rad = P.r * (1 - L / P.n) * wob + 4;
+          d += (s === 0 ? 'M' : 'L') + (P.x + Math.cos(a) * rad).toFixed(1) + ' ' + (P.y + Math.sin(a) * rad).toFixed(1) + ' ';
+        }
+        out.push({ d: d + 'Z', z: L * P.step, op: (0.18 + L / P.n * 0.45).toFixed(2) });
+      }
+    });
+    return out;
+  }
+  componentDidMount() {
+    var self = this;
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    this.reduce = reduce;
+    if (reduce) { this.setState({ typedLen: this.full.length, cursor: false, count: 1 }); return; }
+    var i = 0;
+    this.typeTimer = setInterval(function () {
+      i += 1;
+      self.setState({ typedLen: i });
+      if (i >= self.full.length) {
+        clearInterval(self.typeTimer);
+        self.cursorTimer = setTimeout(function () { self.setState({ cursor: false }); }, 2600);
+      }
+    }, 38);
+    var start = null;
+    this.countDelay = setTimeout(function () {
+      var step = function (t) {
+        if (start === null) start = t;
+        var p = Math.min(1, (t - start) / 1800);
+        self.setState({ count: 1 - Math.pow(1 - p, 3) });
+        if (p < 1) self.raf = requestAnimationFrame(step);
+      };
+      self.raf = requestAnimationFrame(step);
+    }, 900);
+  }
+  componentWillUnmount() {
+    clearInterval(this.typeTimer); clearTimeout(this.cursorTimer); clearTimeout(this.countDelay);
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.moveRaf) cancelAnimationFrame(this.moveRaf);
+  }
+  rings(peaks, levels) {
+    var out = [];
+    peaks.forEach(function (P) {
+      for (var L = 1; L <= levels; L++) {
+        var d = '';
+        for (var s = 0; s <= 90; s++) {
+          var a = (s / 90) * Math.PI * 2;
+          var wob = 1 + 0.16 * Math.sin(P.k * a + P.p + L * 0.35) + 0.08 * Math.sin((P.k + 3) * a - P.p * 1.3 + L * 0.2);
+          var rad = (L / levels) * P.r * wob;
+          d += (s === 0 ? 'M' : 'L') + (P.x + Math.cos(a) * rad * 1.25).toFixed(1) + ' ' + (P.y + Math.sin(a) * rad * 0.62).toFixed(1) + ' ';
+        }
+        out.push({ d: d + 'Z' });
+      }
+    });
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#3DB58B';
+    var onAccent = accent.toLowerCase() === '#7c5cff' ? '#FFFFFF' : '#07130F';
+    var sev = { low: '#7C8B86', med: '#C9A227', high: '#E07A2F', crit: '#D2453B' };
+    var sevLight = { Low: '#56665F', Medium: '#7A6000', High: '#A6470F', Critical: '#B3261E' };
+    var dotOf = { Low: sev.low, Medium: sev.med, High: sev.high, Critical: sev.crit };
+    var counts = [[0, 1, 2, 1, 0], [1, 3, 4, 2, 1], [2, 4, 6, 3, 2], [1, 3, 5, 4, 2], [0, 2, 3, 3, 1]];
+    var heat = [], heatLight = [], idx = 0;
+    for (var r = 5; r >= 1; r--) {
+      for (var c = 1; c <= 5; c++) {
+        var s = r * c, n = counts[5 - r][c - 1];
+        var band = s >= 20 ? 'crit' : s >= 10 ? 'high' : s >= 5 ? 'med' : 'low';
+        var a0 = 20 + (c - 1) * 6 + (5 - r) * 4;
+        heat.push({ n: n || '', bg: 'color-mix(in srgb, ' + sev[band] + ' ' + (n ? 22 + n * 9 : 10) + '%, #111A17)', range: 'entry ' + a0 + '% cover ' + (a0 + 18) + '%' });
+        heatLight.push({ n: n || '', bg: 'color-mix(in srgb, ' + sev[band] + ' ' + (n ? 16 + n * 8 : 6) + '%, #FFFFFF)' });
+        idx++;
+      }
+    }
+    var shotRows = [
+      ['INC-4812', 'Finger caught in packing machine chain', 'Critical'],
+      ['INC-4790', 'Forklift struck worker in loading bay', 'High'],
+      ['INC-4771', 'Chemical splash while transferring solvent', 'Medium'],
+      ['INC-4766', 'Fall from mezzanine ladder', 'High']
+    ].map(function (d) { return { code: d[0], title: d[1], sev: d[2], fg: sevLight[d[2]], dot: dotOf[d[2]], bg: 'color-mix(in srgb, ' + dotOf[d[2]] + ' 13%, transparent)' }; });
+    var steps = [
+      ['Step 1', 'Create your company', 'Sign up with your work email. You become the Org Admin of a private space.'],
+      ['Step 2', 'Add your team', 'Add departments and people, each with their role and department already set.'],
+      ['Step 3', 'Record your risks', 'Each department writes down its risks with an owner and a score.'],
+      ['Step 4', 'Handle incidents', 'Report what happened, link it to its risk and follow it until it is closed.']
+    ].map(function (d, i) { return { n: String(i + 1), title: d[1], text: d[2], range: 'entry ' + (35 + i * 10) + '% cover ' + (40 + i * 7) + '%' }; });
+    var tl = [
+      ['Mon 09:14', 'Reported by the line supervisor', '#E8EFEB'],
+      ['Mon 09:40', 'Assigned to Maintenance, now Investigating', '#E8EFEB'],
+      ['Mon 11:05', 'Contained: machine locked out and tagged', accent],
+      ['Tue 16:20', 'Linked to risk RSK-0042, hazardous energy', '#E8EFEB'],
+      ['Thu 10:30', 'Resolved: lock-out training repeated for the shift', '#E8EFEB']
+    ];
+    var timeline = tl.map(function (d, i) { return { time: d[0], text: d[1], color: d[2], range: 'entry ' + (20 + i * 12) + '% cover ' + (30 + i * 6) + '%' }; });
+    var roles = [
+      ['Org Admin', 'Everything in the company'], ['Risk Officer', 'All risks and incidents'], ['Department Head', 'Their own department'], ['Auditor', 'Everything, read-only'], ['Employee', 'Incidents they reported or were given']
+    ].map(function (d, i) { return { name: d[0], sees: d[1], range: 'entry ' + (20 + i * 12) + '% cover ' + (30 + i * 6) + '%' }; });
+    var depts = [['Maintenance', 20], ['Production', 16], ['Warehouse', 15], ['Logistics', 9], ['Quality', 6]].map(function (d, i) {
+      var b = d[1] >= 20 ? 'crit' : d[1] >= 10 ? 'high' : d[1] >= 5 ? 'med' : 'low';
+      return { name: d[0], score: d[1], w: (d[1] / 25 * 100) + '%', color: sev[b], range: 'entry ' + (25 + i * 10) + '% cover ' + (40 + i * 6) + '%' };
+    });
+    var fmt = function (v) { return Math.round(v).toLocaleString('en-US'); };
+    var k = this.state.count;
+    var qa = [
+      ['Is my company’s data separate from other companies?', 'Yes. Each company is its own space. Every query is limited to your company, and the database refuses any link to another company’s records.'],
+      ['Who can see what?', 'Org Admins, Risk Officers and Auditors see the whole company. Department Heads see their own department. Employees see the incidents they reported or were given. Auditors can’t change anything.'],
+      ['Can anyone edit an incident’s history?', 'No. Assessments and updates are append-only, and the database blocks edits and deletes.'],
+      ['How is a risk scored?', 'Likelihood × impact, each from 1 to 5: Low (1–4), Medium (5–9), High (10–16) and Critical (20–25).'],
+      ['Is the demo data real?', 'The incidents are real public records from OSHA and an anonymised ServiceNow log. Company names, staff and risk lists are invented, and dates are shifted.']
+    ];
+    var faqs = qa.map(function (pair, i) {
+      var isOpen = self.state.open === i;
+      return { q: pair[0], a: pair[1], open: isOpen, expanded: isOpen ? 'true' : 'false', rot: isOpen ? 'rotate(45deg)' : 'none', toggle: function () { self.setState({ open: isOpen ? -1 : i }); } };
+    });
+    var sevC = { low: '#93A69D', med: '#E3C45A', high: '#F5A066', crit: '#FF7A6E' };
+    var pins = [
+      { x: 245, y: 185, z: 88, h: 74, c: sevC.crit, ring: 'rgba(210,69,59,0.25)', label: 'RSK-0042 · 20' },
+      { x: 300, y: 150, z: 50, h: 50, c: sevC.high, ring: 'rgba(224,122,47,0.2)', label: '' },
+      { x: 190, y: 250, z: 40, h: 40, c: sevC.high, ring: 'rgba(224,122,47,0.2)', label: '' },
+      { x: 125, y: 300, z: 42, h: 32, c: sevC.med, ring: 'rgba(201,162,39,0.2)', label: '' },
+      { x: 320, y: 280, z: 14, h: 24, c: sevC.med, ring: 'rgba(201,162,39,0.2)', label: '' },
+      { x: 90, y: 180, z: 4, h: 18, c: sevC.low, ring: 'rgba(124,139,134,0.2)', label: '' }
+    ];
+    return {
+      onMove: function (e) {
+        if (self.reduce) return;
+        var rect = e.currentTarget.getBoundingClientRect();
+        var mx = (e.clientX - rect.left) / rect.width - 0.5, my = (e.clientY - rect.top) / rect.height - 0.5;
+        if (self.moveRaf) return;
+        self.moveRaf = requestAnimationFrame(function () { self.moveRaf = null; self.setState({ mx: mx, my: my }); });
+      },
+      onLeave: function () { self.setState({ mx: 0, my: 0 }); },
+      tiltX: (58 - this.state.my * 10).toFixed(2),
+      tiltZ: (-34 + this.state.mx * 16).toFixed(2),
+      terrain: this.terrainRings(),
+      pins: pins,
+      accent: accent, onAccent: onAccent,
+      typed: this.full.slice(0, this.state.typedLen),
+      showCursor: this.state.cursor,
+      contours: this.rings([{ x: 1100, y: 260, r: 540, k: 3, p: 0.4 }, { x: 160, y: 780, r: 420, k: 4, p: 1.7 }, { x: 760, y: 980, r: 480, k: 5, p: 2.9 }], 14),
+      ctaContours: this.rings([{ x: 720, y: 600, r: 520, k: 3, p: 1.1 }], 12),
+      shotKpis: [{ label: 'Open incidents', value: '412' }, { label: 'Critical risks', value: '14' }, { label: 'Reported this month', value: '231' }, { label: 'Overdue reviews', value: '6' }],
+      heat: heat, heatLight: heatLight, shotRows: shotRows, steps: steps, timeline: timeline, roles: roles, depts: depts,
+      n1: fmt(24802 * k), n2: fmt(5481 * k), n3: fmt(19 * k),
+      orgs: [{ name: 'Ironbridge Manufacturing Group', text: 'A factory group with 5,481 real OSHA injury reports.' }, { name: 'Meridian IT Services', text: 'An IT service desk with 24,802 real ServiceNow tickets.' }],
+      roleNames: ['Org Admin', 'Risk Officer', 'Department Head', 'Auditor', 'Employee'],
+      faqs: faqs
+    };
+  }
+}
+</script>
+</body>
+</html>

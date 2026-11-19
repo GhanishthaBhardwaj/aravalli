@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aravalli log in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0F7A5A}a:hover{color:#0A5A42}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #0F7A5A;outline-offset:2px}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 900px; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 15px; line-height: 1.55; color: #0F1A16; background: #F4F6F5; -webkit-font-smoothing: antialiased">
+
+<aside style="flex: 1 1 420px; position: relative; overflow: hidden; isolation: isolate; background: #0B1210; color: #E8EFEB; padding: 48px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; box-sizing: border-box">
+<svg viewBox="0 0 640 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1"><g fill="none" stroke="#A0D7BE" stroke-opacity="0.14"><sc-for list="{{contours}}" as="c" hint-placeholder-count="14"><path d="{{c.d}}"></path></sc-for></g></svg>
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #E8EFEB; font-weight: 650; font-size: 18px"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 19l6.5-10 4 6 3-4.5L22 19H2z" fill="#3DB58B"></path></svg>Aravalli</a>
+<div>
+<h2 style="margin: 0 0 12px; font-size: 38px; line-height: 1.08; letter-spacing: -0.035em; font-weight: 700; max-width: 14ch">Every risk, every incident, one record.</h2>
+<p style="margin: 0; color: #A9B8B1; max-width: 40ch">Sign in to see your organisation's risk register and the incidents assigned to you.</p>
+</div>
+<p style="margin: 0; font-size: 13px; color: #93A69D">Demo organisations use real public incident records with invented names.</p>
+</aside>
+
+<main style="flex: 1 1 520px; display: flex; align-items: center; justify-content: center; padding: 48px 24px; box-sizing: border-box">
+<div style="width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 22px">
+<div>
+<h1 style="margin: 0 0 6px; font-size: 28px; letter-spacing: -0.03em; font-weight: 700">Log in</h1>
+<p style="margin: 0; color: #56665F">New here? <a href="Main.dc.html">Create an organisation</a></p>
+</div>
+<form style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="email" style="font-size: 13.5px; font-weight: 550">Work email</label><input id="email" type="email" autocomplete="email" placeholder="you@company.com" style="font: inherit; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #C9D3CF; background: #FFFFFF; color: #0F1A16"></div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><label for="password" style="font-size: 13.5px; font-weight: 550">Password</label><a href="#" style="font-size: 13.5px">Forgot password?</a></div>
+<input id="password" type="password" autocomplete="current-password" style="font: inherit; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #C9D3CF; background: #FFFFFF; color: #0F1A16">
+</div>
+<button type="button" style="font: inherit; font-weight: 600; min-height: 46px; border: 0; border-radius: 10px; background: #0F7A5A; color: #FFFFFF; cursor: pointer">Log in</button>
+</form>
+<div style="display: flex; align-items: center; gap: 12px; color: #56665F; font-size: 13px"><span style="flex: 1; height: 1px; background: #DCE3E0"></span>or try a demo organisation<span style="flex: 1; height: 1px; background: #DCE3E0"></span></div>
+<sc-for list="{{orgs}}" as="o" hint-placeholder-count="2">
+<section style="background: #FFFFFF; border: 1px solid #DCE3E0; border-radius: 14px; padding: 16px">
+<div style="font-weight: 600">{{o.name}}</div>
+<div style="font-size: 13px; color: #56665F; margin-bottom: 12px">{{o.data}}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="5"><a href="Overview.dc.html" style="text-decoration: none; font-size: 13px; font-weight: 550; color: #0F1A16; border: 1px solid #DCE3E0; background: #F4F6F5; padding: 7px 11px; border-radius: 8px; min-height: 32px">{{r}}</a></sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var out = [];
+    var P = { x: 420, y: 520, r: 520, k: 3, p: 0.8 };
+    for (var L = 1; L <= 14; L++) {
+      var d = '';
+      for (var s = 0; s <= 90; s++) {
+        var a = (s / 90) * Math.PI * 2;
+        var wob = 1 + 0.16 * Math.sin(P.k * a + P.p + L * 0.35) + 0.08 * Math.sin((P.k + 3) * a - P.p * 1.3 + L * 0.2);
+        var rad = (L / 14) * P.r * wob;
+        d += (s === 0 ? 'M' : 'L') + (P.x + Math.cos(a) * rad).toFixed(1) + ' ' + (P.y + Math.sin(a) * rad * 0.8).toFixed(1) + ' ';
+      }
+      out.push({ d: d + 'Z' });
+    }
+    return {
+      contours: out,
+      orgs: [
+        { name: 'Ironbridge Manufacturing Group', data: '5,481 OSHA injury reports' },
+        { name: 'Meridian IT Services', data: '24,802 ServiceNow tickets' }
+      ],
+      roles: ['Org Admin', 'Risk Officer', 'Department Head', 'Auditor', 'Employee']
+    };
+  }
+}
+</script>
+</body>
+</html>
