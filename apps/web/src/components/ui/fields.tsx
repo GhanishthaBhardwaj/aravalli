@@ -22,7 +22,7 @@ export function Field({ label, error, hint, required, className = '', children }
       </label>
       {children({ id, 'aria-invalid': Boolean(error), 'aria-describedby': error || hint ? msgId : undefined })}
       <div id={msgId} aria-live="polite" className="min-h-[22px] pt-1 text-[13px]">
-        {error ? <span className="font-medium text-fg">{error}</span> : hint ? <span className="text-muted">{hint}</span> : null}
+        {error ? <span className="font-medium text-[color:var(--sev-critical-text)]">{error}</span> : hint ? <span className="text-muted">{hint}</span> : null}
       </div>
     </div>
   );

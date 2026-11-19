@@ -20,7 +20,7 @@ const SIZE = { md: 'h-10 px-4 text-[14px]', sm: 'h-8 px-3 text-[13px]' };
 const BASE =
   'inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,transform] duration-150 active:scale-[0.98]';
 
-/** The one button. Primary (orange) is for the single main action on a screen. */
+/** The one button. Primary (jade) is for the single main action on a screen. */
 export function Button({ variant = 'secondary', size = 'md', disabledReason, to, className = '', onClick, type = 'button', children, ...rest }: Props) {
   const blocked = Boolean(disabledReason);
   const classes = `${BASE} ${SIZE[size]} ${VARIANT[variant]} ${className}`;

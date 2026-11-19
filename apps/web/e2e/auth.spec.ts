@@ -1,24 +1,40 @@
 import { expect } from '@playwright/test';
 import { anonymous as test, open, ready, signInAs } from './helpers';
 
-test('a visitor sees a plain landing page with the hero, the role table and the data credits, and no pricing', async ({ page }) => {
+test('a visitor sees the landing page: the typed headline, the sections, the data credits, and no pricing', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep your risks and incidents in one place');
+  const headline = 'See the next risk before it becomes an incident.';
+  await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName(headline);
   await expect(page.getByRole('link', { name: 'Start free' }).first()).toBeVisible();
   await expect(page.getByTestId('hero-visual')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Who can do what' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Auditor' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'About the demo data' })).toBeVisible();
+  await expect(page.getByText('OSHA severe injury report 2025010024')).toBeAttached();
+  await expect(page.getByRole('heading', { name: 'How it works' })).toBeAttached();
+  await expect(page.getByRole('heading', { name: 'Open a demo company' })).toBeAttached();
+  await expect(page.getByRole('heading', { name: 'Questions' })).toBeAttached();
+  await expect(page.getByText('OSHA Severe Injury Reports · US manufacturing 2024–2025').first()).toBeAttached();
+  await expect(page.getByText('UCI ServiceNow Incident Log · anonymised IT company').first()).toBeAttached();
+  await expect(page.getByTestId('landing-demo-osha-manufacturing-Org Admin')).toBeAttached();
   await expect(page.getByText(/pricing|per user|testimonial|placeholder/i)).toHaveCount(0);
+  // the headline types itself, once
+  await expect(page.locator('h1 span[aria-hidden]').first()).toHaveText(headline, { timeout: 5000 });
 });
 
-test('the landing page respects reduced motion and still shows the product screenshot', async ({ browser }) => {
+test('the 3D landscape is hidden on a small screen', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 900 });
+  await page.goto('/');
+  await expect(page.getByTestId('hero-visual')).toBeHidden();
+});
+
+test('the landing page respects reduced motion: no animation, the whole headline at once, and the product screenshot still there', async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await ctx.newPage();
   await page.goto('/');
+  await expect(page.locator('h1 span[aria-hidden]').first()).toHaveText('See the next risk before it becomes an incident.');
+  await expect(page.locator('.lp-cursor')).toHaveCount(0);
   await expect(page.getByTestId('product-shot')).toBeAttached();
   const transform = await page.getByTestId('product-shot').evaluate((el) => getComputedStyle(el).transform);
   expect(transform === 'none' || transform.startsWith('matrix(1, 0, 0, 1')).toBe(true);
+  expect(await page.locator('.lp-spin').evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
   await ctx.close();
 });
 
@@ -37,12 +53,12 @@ test('the old email pages are gone', async ({ page }) => {
 
 test('demo login buttons sign in as each role, the account menu shows who, and sign out ends the session', async ({ page }) => {
   await page.goto('/login');
-  await expect(page.getByRole('heading', { name: 'Try a demonstration organisation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'or try a demo organisation' })).toBeVisible();
   await page.getByTestId('demo-aravalli-industries-Auditor').click();
   await expect(page.getByTestId('account-menu')).toContainText('Auditor');
   await page.getByTestId('account-menu').click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep your risks');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName(/See the next risk/);
   await page.goto('/incidents');
   await expect(page).toHaveURL(/\/login/);
 });
@@ -82,7 +98,7 @@ test('sign-up creates an organisation and its Org Admin, who adds a person who c
   await other.goto('/login');
   await other.getByLabel('Email').fill(person);
   await other.getByLabel('Password').fill('Sams-password-77');
-  await other.getByRole('button', { name: 'Sign in' }).click();
+  await other.getByRole('button', { name: 'Log in' }).click();
   await expect(other.getByTestId('account-menu')).toContainText('Auditor');
 
   // the admin sets a new password for them

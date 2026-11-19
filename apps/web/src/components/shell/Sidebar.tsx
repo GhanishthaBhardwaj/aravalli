@@ -5,7 +5,7 @@ import {
   PlusCircleIcon, Squares2X2Icon, TableCellsIcon, UserPlusIcon, UsersIcon,
 } from '@heroicons/react/24/outline';
 import { useSession } from '../../app/providers';
-import { PRODUCT } from '../../app/brand';
+import { Logo, LogoMark } from '../ui/Logo';
 import { ThemeToggle } from '../ui/theme';
 
 type Item = { to: string; label: string; icon: typeof UsersIcon; end?: boolean; needs?: Permission };
@@ -29,18 +29,13 @@ const NAV: { group: string; items: Item[] }[] = [
 
 /** `drawer` shows labels at every width and adds the theme switch (the top bar has it on larger screens). */
 export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?: () => void }) {
-  const { organisation, can } = useSession();
+  const { can } = useSession();
   const label = drawer ? '' : 'hidden lg:inline';
   return (
-    <nav aria-label="Main" className="flex h-full flex-col bg-surface">
+    <nav aria-label="Main" className="flex h-full flex-col bg-sidebar">
       <div className="flex h-[72px] items-center gap-3 px-5">
-        <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fg text-[17px] font-bold text-bg">
-          {PRODUCT.name[0]}
-        </span>
-        <span className={`${label} min-w-0 leading-tight`}>
-          <span className="block text-[16px] font-semibold tracking-[-0.02em]">{PRODUCT.name}</span>
-          <span className="block truncate text-[13px] text-muted">{organisation.name}</span>
-        </span>
+        <span className={drawer ? '' : 'hidden lg:block'}><Logo /></span>
+        {!drawer && <span className="lg:hidden"><LogoMark size={26} /></span>}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
@@ -56,7 +51,7 @@ export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?:
                 title={it.label}
                 className={({ isActive }) =>
                   `flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] transition-colors duration-150 ${
-                    isActive ? 'bg-surface-2 font-medium text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
+                    isActive ? 'bg-surface font-semibold text-fg shadow-[inset_2px_0_0_var(--accent),0_0_0_1px_var(--line)]' : 'text-muted hover:bg-surface hover:text-fg'
                   }`
                 }
               >

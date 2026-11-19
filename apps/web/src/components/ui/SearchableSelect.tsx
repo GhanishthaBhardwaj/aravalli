@@ -65,7 +65,7 @@ export function SearchableSelect({ id, options, value, onChange, placeholder = '
         }}
       />
       {open && (
-        <ul id={lid} role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-line bg-surface py-1 shadow-pop">
+        <ul id={lid} role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-line bg-surface py-1 shadow-pop">
           {shown.length === 0 && <li className="px-3 py-2 text-[14px] text-muted">No matches</li>}
           {shown.map((o, i) => (
             <li
@@ -75,8 +75,8 @@ export function SearchableSelect({ id, options, value, onChange, placeholder = '
               onMouseDown={(e) => { e.preventDefault(); pick(o); }}
               className={`cursor-pointer px-3 py-2 ${i === hi ? 'bg-surface-2' : ''}`}
             >
-              <span className="block truncate text-[14px]">{o.label}</span>
-              {o.hint && <span className="num block text-[12px] text-subtle">{o.hint}</span>}
+              <span className="block break-words text-[14px] font-medium">{o.label}</span>
+              {o.hint && <span className="block break-words text-[12.5px] leading-snug text-muted">{o.hint}</span>}
             </li>
           ))}
         </ul>

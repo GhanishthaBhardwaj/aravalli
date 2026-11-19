@@ -17,59 +17,61 @@
 }
 
 /* ------------------------------------------------------------------ tokens
-   One accent (safety orange), used only for primary actions and Critical risk.
-   Risk bands run light grey -> mid grey -> dark -> orange, and are always labelled. */
+   "Ridge": forest graphite and jade (see docs/design/Colours.dc.html). Light is the app default.
+   Jade is the brand colour and is used for the logo, the active menu item, the main button and charts.
+   Severity has its own colours (grey, amber, orange, red) and is always shown as a dot plus the word. */
 :root {
-  --bg: #fafaf9;
+  --bg: #f4f6f5;
   --surface: #ffffff;
-  --surface-2: #f4f4f2;
-  --line: #e7e7e4;
-  --line-strong: #d4d4cf;
-  --fg: #111111;
-  --muted: #52525b;
-  --subtle: #71717a;
+  --surface-2: #f9fbfa;
+  --sidebar: #eef2f0;
+  --line: #dce3e0;
+  --line-strong: #c9d3cf;
+  --track: #ebf0ee;
+  --fg: #0f1a16;
+  --muted: #56665f;
+  --subtle: #56665f;
 
-  --accent: #f25c05;
-  --accent-hover: #d94f00;
-  --accent-fg: #111111;
+  --accent: #0f7a5a;
+  --accent-hover: #0a5a42;
+  --accent-fg: #ffffff;
 
-  --band-low-bg: #e4e4e0;
-  --band-low-fg: #3f3f46;
-  --band-medium-bg: #a1a1aa;
-  --band-medium-fg: #111111;
-  --band-high-bg: #27272a;
-  --band-high-fg: #fafaf9;
-  --band-critical-bg: #f25c05;
-  --band-critical-fg: #111111;
+  /* severity: dot colour, text colour on this background, tinted pill background */
+  --sev-low: #7c8b86;
+  --sev-medium: #c9a227;
+  --sev-high: #e07a2f;
+  --sev-critical: #d2453b;
+  --sev-low-text: #56665f;
+  --sev-medium-text: #7a6000;
+  --sev-high-text: #a6470f;
+  --sev-critical-text: #b3261e;
 
-  --overlay: rgba(17, 17, 17, 0.45);
-  --shadow-pop: 0 12px 32px -8px rgba(17, 17, 17, 0.18), 0 2px 6px rgba(17, 17, 17, 0.06);
+  --overlay: rgba(15, 26, 22, 0.45);
+  --shadow-pop: 0 12px 32px -8px rgba(15, 26, 22, 0.18), 0 2px 6px rgba(15, 26, 22, 0.06);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   color-scheme: light;
 }
 
 [data-theme='dark'] {
-  --bg: #0a0a0a;
-  --surface: #111113;
-  --surface-2: #18181b;
-  --line: #27272a;
-  --line-strong: #3f3f46;
-  --fg: #ededed;
-  --muted: #a1a1aa;
-  --subtle: #8b8b94;
+  --bg: #0b1210;
+  --surface: #111a17;
+  --surface-2: #17231f;
+  --sidebar: #0e1714;
+  --line: rgba(190, 230, 210, 0.1);
+  --line-strong: rgba(190, 230, 210, 0.2);
+  --track: #1c2925;
+  --fg: #e8efeb;
+  --muted: #93a69d;
+  --subtle: #93a69d;
 
-  --accent: #f25c05;
-  --accent-hover: #ff7424;
-  --accent-fg: #111111;
+  --accent: #3db58b;
+  --accent-hover: #55c79d;
+  --accent-fg: #07130f;
 
-  --band-low-bg: #27272a;
-  --band-low-fg: #d4d4d8;
-  --band-medium-bg: #52525b;
-  --band-medium-fg: #fafaf9;
-  --band-high-bg: #e4e4e7;
-  --band-high-fg: #111111;
-  --band-critical-bg: #f25c05;
-  --band-critical-fg: #111111;
+  --sev-low-text: #a9b5b0;
+  --sev-medium-text: #e3c45a;
+  --sev-high-text: #f5a066;
+  --sev-critical-text: #ff9a90;
 
   --overlay: rgba(0, 0, 0, 0.6);
   --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -85,37 +87,36 @@
     font-family: 'Geist', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.5;
-    font-feature-settings: 'ss01';
-    -webkit-font-smoothing: antialiased;
+        -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   h1, h2, h3 { letter-spacing: -0.025em; }
   a { color: inherit; }
-  :focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
   button { font: inherit; color: inherit; }
-  ::selection { background: var(--fg); color: var(--bg); }
+  ::selection { background: var(--accent); color: var(--accent-fg); }
 }
 
 @layer components {
   /* IDs and numbers */
   .num { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; }
 
-  /* risk bands */
-  .band-low { background: var(--band-low-bg); color: var(--band-low-fg); }
-  .band-medium { background: var(--band-medium-bg); color: var(--band-medium-fg); }
-  .band-high { background: var(--band-high-bg); color: var(--band-high-fg); }
-  .band-critical { background: var(--band-critical-bg); color: var(--band-critical-fg); }
+  /* risk bands: a tinted fill with dark text (a cell or a score chip); the band name is always written next to it */
+  .band-low { background: color-mix(in srgb, var(--sev-low) 22%, var(--surface)); color: var(--sev-low-text); }
+  .band-medium { background: color-mix(in srgb, var(--sev-medium) 26%, var(--surface)); color: var(--sev-medium-text); }
+  .band-high { background: color-mix(in srgb, var(--sev-high) 26%, var(--surface)); color: var(--sev-high-text); }
+  .band-critical { background: color-mix(in srgb, var(--sev-critical) 26%, var(--surface)); color: var(--sev-critical-text); }
 
   /* tables */
   .tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
   .tbl th {
     position: sticky; top: 0; z-index: 1; height: 44px; padding: 0 16px; text-align: left; white-space: nowrap;
-    background: var(--surface); border-bottom: 1px solid var(--line-strong); color: var(--muted); font-weight: 500; font-size: 13px;
+    background: var(--surface-2); border-bottom: 1px solid var(--line); color: var(--muted); font-weight: 500; font-size: 13px;
   }
   .tbl td { height: 56px; padding: 0 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   .tbl tbody tr:last-child td { border-bottom: 0; }
   .tbl tbody tr.row-link { cursor: pointer; transition: background-color 120ms var(--ease); }
-  .tbl tbody tr.row-link:hover, .tbl tbody tr.row-link:focus-visible { background: var(--surface-2); }
+  .tbl tbody tr.row-link:hover, .tbl tbody tr.row-link:focus-visible { background: color-mix(in srgb, var(--accent) 6%, transparent); }
   .tbl .right { text-align: right; }
   @media (max-width: 640px) {
     .tbl th, .tbl td { padding-left: 12px; padding-right: 12px; }
@@ -129,12 +130,12 @@
   }
   .control::placeholder { color: var(--subtle); }
   .control:hover { border-color: var(--subtle); }
-  .control:focus { border-color: var(--fg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg) 14%, transparent); outline: none; }
+  .control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); outline: none; }
   textarea.control { height: auto; padding: 10px 12px; }
-  .control[aria-invalid='true'] { border-color: var(--fg); box-shadow: inset 3px 0 0 var(--fg); }
+  .control[aria-invalid='true'] { border-color: var(--sev-critical); box-shadow: inset 3px 0 0 var(--sev-critical); }
   .control:disabled { background: var(--surface-2); color: var(--subtle); cursor: not-allowed; }
   select.control { appearance: none; padding-right: 36px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2371717a'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2356665f'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 10px center; background-size: 18px; }
 }
 
@@ -148,7 +149,20 @@
 .tip { display: none; }
 .tip-host:hover .tip, .tip-host:focus-within .tip { display: block; }
 
+/* App motion (step 8): short, CSS only, and switched off below when the system asks for reduced motion. */
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }
+.page-title { animation: fade-up 0.35s ease-out both; }
+.grow-x { transform-origin: left center; animation: grow-x 0.7s var(--ease) both; }
+.pop-in { animation: pop-in 0.45s var(--ease) both; }
+/* The theme switch fades: the class is on <html> only for a moment after the person changes the theme (see theme.tsx). */
+html.theme-fade, html.theme-fade * { transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease !important; }
+button:not(:disabled):active, a.btn:active { transform: scale(0.98); }
+
 @media (prefers-reduced-motion: reduce) {
+  .page-title, .grow-x, .pop-in { animation: none !important; }
+  html.theme-fade, html.theme-fade * { transition: none !important; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
@@ -158,8 +172,3 @@
   .app-main { padding: 0 !important; margin: 0 !important; }
   body.print-single [data-report]:not([data-print-active]) { display: none !important; }
 }
-
-/* The landing page shows the screenshot that matches the colour theme. */
-.theme-dark-only { display: none; }
-[data-theme='dark'] .theme-light-only { display: none; }
-[data-theme='dark'] .theme-dark-only { display: block; }

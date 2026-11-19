@@ -10,19 +10,22 @@ interface Props {
   selected?: { likelihood: number; impact: number } | null;
   /** Cells appear in a diagonal wave, once. */
   reveal?: boolean;
+  /** Smaller cells and no word labels, for a narrow panel. */
+  compact?: boolean;
 }
 
 /** 5×5 grid. Cell tone = risk band of its position (light grey, grey, dark, orange); the number is how many risks sit there. */
-export function HeatMap({ cells, onSelect, selected, reveal }: Props) {
+export function HeatMap({ cells, onSelect, selected, reveal, compact }: Props) {
   const wave = reveal && !reducedMotion();
-  const size = 'h-[3.6rem] w-[3.6rem] sm:h-[4.4rem] sm:w-[4.4rem]';
+  const size = compact ? 'h-[2.9rem] w-[2.9rem]' : 'h-[3.6rem] w-[3.6rem] sm:h-[4.4rem] sm:w-[4.4rem]';
+  const rowH = compact ? 'h-[2.9rem]' : 'h-[3.6rem] sm:h-[4.4rem]';
   return (
     <div className="inline-block max-w-full">
       <div className="flex gap-2">
         <div className="flex flex-col gap-1.5">
           {[5, 4, 3, 2, 1].map((l) => (
-            <div key={l} className="flex h-[3.6rem] items-center justify-end gap-2 sm:h-[4.4rem]">
-              <span className="hidden text-[13px] text-muted sm:block">{LIKELIHOOD_LABELS[l - 1]}</span>
+            <div key={l} className={`flex ${rowH} items-center justify-end gap-2`}>
+              {!compact && <span className="hidden text-[13px] text-muted sm:block">{LIKELIHOOD_LABELS[l - 1]}</span>}
               <span className="num w-3 text-right text-[13px] font-medium">{l}</span>
             </div>
           ))}
@@ -43,13 +46,13 @@ export function HeatMap({ cells, onSelect, selected, reveal }: Props) {
                     onClick={() => onSelect?.(c)}
                     aria-pressed={onSelect ? on : undefined}
                     aria-label={`Likelihood ${l}, impact ${i}, ${band}, ${n} ${n === 1 ? 'risk' : 'risks'}`}
-                    className={`flex items-center justify-center rounded-lg ${BAND_CLASS[band]} ${size} ${onSelect ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
+                    className={`flex items-center justify-center rounded-[10px] ${BAND_CLASS[band]} ${size} ${onSelect ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
                     style={{ outline: on ? '3px solid var(--fg)' : 'none', outlineOffset: 2 }}
                     initial={wave ? { opacity: 0, scale: 0.6 } : false}
                     animate={{ opacity: n ? 1 : 0.28, scale: 1 }}
                     transition={{ duration: 0.3, delay: wave ? (l - 1 + (i - 1)) * 0.045 : 0, ease: [0.2, 0.7, 0.2, 1] }}
                   >
-                    {n > 0 && <span className="num text-[24px] font-semibold leading-none">{n}</span>}
+                    {n > 0 && <span className={`num font-semibold leading-none ${compact ? 'text-[17px]' : 'text-[24px]'}`}>{n}</span>}
                   </motion.button>
                 );
               }),
@@ -59,7 +62,7 @@ export function HeatMap({ cells, onSelect, selected, reveal }: Props) {
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="leading-tight">
                 <span className="num text-[13px] font-medium">{i}</span>
-                <span className="hidden text-[12px] text-muted sm:block">{IMPACT_LABELS[i - 1]}</span>
+                {!compact && <span className="hidden text-[12px] text-muted sm:block">{IMPACT_LABELS[i - 1]}</span>}
               </div>
             ))}
           </div>

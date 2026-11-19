@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { type Errors, permit, riskNeedsNote, type RiskStatus, riskTransitions } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useSession, useToast } from '../app/providers';
+import { SAMPLE_REGISTER } from './RiskRegister';
 import { fmtDate } from '../app/format';
 import { NotFound } from './NotFound';
 import { api, fieldErrors } from '../api/client';
@@ -23,7 +24,7 @@ type Tab = 'assessments' | 'incidents';
 
 export function RiskDetail() {
   const { code = '' } = useParams();
-  const { actor } = useSession();
+  const { actor, organisation } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('assessments');
   const [assessOpen, setAssessOpen] = useState(false);
@@ -67,6 +68,7 @@ export function RiskDetail() {
     <Page
       title={risk?.title ?? code}
       code={risk?.risk_code ?? code}
+      description={organisation.data_note ? SAMPLE_REGISTER : undefined}
       loading={loading}
       error={error}
       onRetry={reload}

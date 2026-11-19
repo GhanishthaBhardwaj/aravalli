@@ -19,8 +19,11 @@ import { Table, type Column } from '../components/ui/Table';
 const KEYS = ['q', 'department', 'owner', 'status', 'band', 'l', 'i'];
 const PAGE_SIZE = 20;
 
+/** The two demonstration organisations have a risk register that was written for the demo, not taken from the real data. */
+export const SAMPLE_REGISTER = 'Sample risk register written for this demo, linked to real incidents.';
+
 export function RiskRegister() {
-  const { actor } = useSession();
+  const { actor, organisation } = useSession();
   const f = useFilters(KEYS);
   const list = useListParams({ sort: 'code', dir: 'asc' }, PAGE_SIZE);
   const heatCell = Boolean(f.get('l') || f.get('i'));
@@ -60,7 +63,7 @@ export function RiskRegister() {
   return (
     <Page
       title="Risk Register"
-      description="Every registered risk, scored by its latest assessment."
+      description={organisation.data_note ? SAMPLE_REGISTER : 'Every registered risk, scored by its latest assessment.'}
       actions={
         <Button variant="primary" to="/risks/new" disabledReason={p.allowed ? undefined : p.reason}>
           <PlusIcon className="h-4 w-4" aria-hidden="true" /> Register risk

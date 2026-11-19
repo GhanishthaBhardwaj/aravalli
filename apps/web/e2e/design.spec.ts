@@ -4,28 +4,31 @@ import { open, ready, test, signInAs } from './helpers';
 const theme = (page: import('@playwright/test').Page) => page.evaluate(() => document.documentElement.dataset.theme);
 
 test.describe('colour theme', () => {
-  test('follows the system preference by default (dark)', async ({ browser }) => {
+  // The app is light by default (the design decision); the System choice in the switch still follows the computer.
+  test('is light by default, even when the system prefers dark', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark' });
     const page = await ctx.newPage();
-    await open(page, '/');
-    expect(await theme(page)).toBe('dark');
+    await open(page, '/login');
+    expect(await theme(page)).toBe('light');
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(bg).toBe('rgb(10, 10, 10)');
+    expect(bg).toBe('rgb(244, 246, 245)');
     await ctx.close();
   });
 
-  test('follows the system preference by default (light)', async ({ browser }) => {
-    const ctx = await browser.newContext({ colorScheme: 'light' });
+  test('the dark theme uses the Ridge night colours', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark' });
     const page = await ctx.newPage();
-    await open(page, '/');
-    expect(await theme(page)).toBe('light');
+    await open(page, '/login');
+    await page.getByRole('radio', { name: 'System' }).click();
+    expect(await theme(page)).toBe('dark');
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(11, 18, 16)');
     await ctx.close();
   });
 
   test('the toggle overrides the system, persists across reloads, and System goes back to following it', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light' });
     const page = await ctx.newPage();
-    await open(page, '/');
+    await open(page, '/login');
     await page.getByRole('radio', { name: 'Dark' }).click();
     expect(await theme(page)).toBe('dark');
     await page.reload();
@@ -40,6 +43,7 @@ test.describe('colour theme', () => {
   test('the theme is applied before first paint, so there is no flash', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark' });
     const page = await ctx.newPage();
+    await page.addInitScript(() => localStorage.setItem('aravalli:theme', 'dark'));
     await page.goto('/', { waitUntil: 'commit' });
     await page.waitForFunction(() => document.documentElement.dataset.theme !== undefined, null, { timeout: 2000 });
     expect(await theme(page)).toBe('dark');
@@ -60,10 +64,10 @@ test('Geist is the UI font, and Geist Mono is used for record codes', async ({ p
   expect(fonts.sans && fonts.mono).toBe(true);
 });
 
-test('the one accent is orange, used for the primary action', async ({ page }) => {
+test('the one accent is jade, used for the primary action (and never for severity)', async ({ page }) => {
   await open(page, '/risks');
   const bg = await page.getByRole('link', { name: 'Register risk' }).evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(bg).toBe('rgb(242, 92, 5)');
+  expect(bg).toBe('rgb(15, 122, 90)');
 });
 
 test('a list with nothing in it explains itself instead of showing an empty table', async ({ page }) => {

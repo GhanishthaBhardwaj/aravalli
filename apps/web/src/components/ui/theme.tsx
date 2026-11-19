@@ -8,9 +8,9 @@ const KEY = 'aravalli:theme';
 const readPref = (): ThemePref => {
   try {
     const v = localStorage.getItem(KEY);
-    return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
+    return v === 'light' || v === 'dark' || v === 'system' ? v : 'light'; // light is the default
   } catch {
-    return 'system';
+    return 'light';
   }
 };
 
@@ -24,7 +24,7 @@ function apply(pref: ThemePref) {
 interface ThemeCtx { pref: ThemePref; setPref: (p: ThemePref) => void }
 const ThemeContext = createContext<ThemeCtx | null>(null);
 
-/** Follows the system colour scheme by default; a saved choice overrides it. */
+/** Light by default; a saved choice (Light, Dark or System) overrides it. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [pref, setPrefState] = useState<ThemePref>(readPref);
 
@@ -38,6 +38,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [pref]);
 
   const setPref = useCallback((p: ThemePref) => {
+    // fade the colours for a moment (the CSS for .theme-fade is switched off when the system asks for reduced motion)
+    document.documentElement.classList.add('theme-fade');
+    setTimeout(() => document.documentElement.classList.remove('theme-fade'), 400);
     setPrefState(p);
     try {
       localStorage.setItem(KEY, p);

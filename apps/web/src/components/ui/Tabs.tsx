@@ -47,11 +47,11 @@ export function Tabs<T extends string>({ label, tabs, value, onChange }: Props<T
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => onKey(e, i)}
-            className={`relative -mb-px whitespace-nowrap py-3 text-[14px] font-medium transition-colors duration-150 ${active ? 'text-fg' : 'text-subtle hover:text-fg'}`}
+            className={`relative -mb-px whitespace-nowrap py-3 text-[14px] font-medium transition-colors duration-150 ${active ? 'text-fg' : 'text-muted hover:text-fg'}`}
           >
             {t.label}
             {t.count !== undefined && <span className="num ml-2 text-[13px] text-subtle">{t.count}</span>}
-            {active && <motion.span layoutId={`${group}-underline`} className="absolute inset-x-0 bottom-0 h-0.5 bg-fg" transition={{ duration: 0.18 }} />}
+            {active && <motion.span layoutId={`${group}-underline`} className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" transition={{ duration: 0.18 }} />}
           </button>
         );
       })}

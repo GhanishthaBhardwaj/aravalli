@@ -29,8 +29,8 @@ export function SegmentedControl({ legend, labels, value, onChange, error, clear
           return (
             <label
               key={v}
-              className={`cursor-pointer rounded-lg border px-1 py-2 text-center transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--fg)] ${
-                on ? 'border-fg bg-fg text-bg' : 'border-line-strong bg-surface hover:bg-surface-2'
+              className={`cursor-pointer rounded-lg border px-1 py-2 text-center transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent)] ${
+                on ? 'border-accent bg-accent text-accent-fg' : 'border-line-strong bg-surface hover:bg-surface-2'
               }`}
             >
               <input type="radio" className="sr-only" name={name} checked={on} onChange={() => onChange(v)} />

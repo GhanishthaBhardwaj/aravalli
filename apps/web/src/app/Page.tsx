@@ -11,6 +11,7 @@ interface Props {
   code?: string;
   description?: ReactNode;
   actions?: ReactNode;
+  compact?: boolean;
   /** The page's main request is still running for the first time. */
   loading?: boolean;
   /** The page's main request failed. */
@@ -20,7 +21,7 @@ interface Props {
 }
 
 /** Page header plus the loading and error states of the page's main request. */
-export function Page({ title, code, description, actions, loading, error, onRetry, children }: Props) {
+export function Page({ title, code, description, actions, compact, loading, error, onRetry, children }: Props) {
   const { setMeta } = useMeta();
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function Page({ title, code, description, actions, loading, error, onRetr
   if (loading) return <PageSkeleton />;
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>
-      <PageHeader title={title} code={code} description={description} actions={actions} />
+      <PageHeader title={title} code={code} description={description} actions={actions} compact={compact} />
       {error ? <ErrorState title="This page could not be loaded" body={error.message} onRetry={onRetry} /> : children}
     </motion.div>
   );

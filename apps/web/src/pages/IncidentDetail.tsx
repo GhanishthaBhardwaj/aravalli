@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { type Errors, isIncidentFinal, permit } from '@aravalli/shared';
+import { type Errors, INCIDENT_STATUSES, isIncidentFinal, permit } from '@aravalli/shared';
 import { Page } from '../app/Page';
 import { useSession, useToast } from '../app/providers';
 import { fmtDateTime } from '../app/format';
@@ -13,7 +13,7 @@ import { UpdateTimeline } from '../components/incident/UpdateTimeline';
 import { SeverityBadge, StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/fields';
-import { Fact, Section } from '../components/ui/layout';
+import { Card } from '../components/ui/layout';
 import { PersonPicker } from '../components/ui/PersonPicker';
 import { RiskPicker } from '../components/ui/RiskPicker';
 
@@ -67,40 +67,70 @@ function Inner({ code }: { code: string }) {
     }
   };
 
+  // The stage bar: each stage reached shows when it was first reached; a reopened incident simply moves back.
+  const reached = (stage: string) => inc?.updates.filter((u) => u.status_to === stage).map((u) => u.created_at).sort()[0];
+  const stageIndex = inc ? INCIDENT_STATUSES.indexOf(inc.status) : 0;
+
   return (
-    <Page title={inc?.title ?? code} code={inc?.incident_code ?? code} loading={loading} error={error} onRetry={reload}>
+    <Page title={inc?.title ?? code} compact loading={loading} error={error} onRetry={reload}>
       {inc && (
-        <>
-          <div className="-mt-6 mb-12 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex flex-col gap-[18px]">
+          <div className="-mt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
             <SeverityBadge severity={inc.severity} />
             <StatusBadge status={inc.status} />
-            <span className="text-[14px] text-muted">{['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} <span className="num">{days}</span> {days === 1 ? 'day' : 'days'}</span>
+            <span className="num text-[12.5px] text-muted">{inc.incident_code} · reported {fmtDateTime(inc.reported_at)}</span>
+            <span className="text-[13.5px] text-muted">· {['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} <span className="num">{days}</span> {days === 1 ? 'day' : 'days'}</span>
           </div>
 
-          <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[340px_minmax(0,1fr)]">
-            <div className="min-w-0 space-y-12">
-              <Section title="Details">
-                <dl className="space-y-5">
-                  <Fact label="Department">{inc.department_name}</Fact>
-                  <Fact label="Reported by">{inc.reported_by_name}</Fact>
-                  <Fact label="Assigned to">{inc.assigned_to_name ?? <span className="text-subtle">Unassigned</span>}</Fact>
-                  <Fact label="Linked risk">{inc.risk_code ? <Link to={`/risks/${inc.risk_code}`} className="num text-[14px] underline underline-offset-4">{inc.risk_code}</Link> : <span className="text-subtle">None</span>}</Fact>
-                  <Fact label="Occurred">{fmtDateTime(inc.occurred_at)}</Fact>
-                  <Fact label="Reported">{fmtDateTime(inc.reported_at)}</Fact>
-                  <Fact label="Resolved">{fmtDateTime(inc.resolved_at)}</Fact>
-                  {inc.source_system && <Fact label="Source record"><span className="num text-[14px]">{inc.source_id}</span> <span className="text-muted">in {inc.source_system}</span></Fact>}
-                  <Fact label="Description"><p className="text-[14px] leading-6 text-muted">{inc.description}</p></Fact>
-                </dl>
-              </Section>
+          <ol aria-label="Incident progress" className="grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-5">
+            {INCIDENT_STATUSES.map((stage, i) => {
+              const done = i <= stageIndex;
+              const when = reached(stage);
+              return (
+                <li key={stage} aria-current={i === stageIndex ? 'step' : undefined} className="border-t-[3px] pt-2" style={{ borderColor: done ? 'var(--accent)' : 'var(--line)' }}>
+                  <div className={done ? (i === stageIndex ? 'font-bold' : 'font-medium') : 'font-medium text-muted'}>{stage}</div>
+                  <div className="num text-[12px] text-muted">{when ? fmtDateTime(when) : 'Not yet'}</div>
+                </li>
+              );
+            })}
+          </ol>
 
-              <Section title="Assignment">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <Card className="p-5">
+                <h2 className="mb-2.5 text-[15px] font-semibold">What happened</h2>
+                <p className="max-w-[68ch] whitespace-pre-line break-words text-[14.5px] leading-6">{inc.description}</p>
+              </Card>
+
+              <Card className="p-5">
+                <h2 className="mb-3.5 text-[15px] font-semibold">Details</h2>
+                <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-[150px_minmax(0,1fr)]">
+                  <Detail label="Department">{inc.department_name}</Detail>
+                  <Detail label="Reported by">{inc.reported_by_name}</Detail>
+                  <Detail label="Assigned to">{inc.assigned_to_name ?? <span className="text-muted">Unassigned</span>}</Detail>
+                  <Detail label="Occurred"><span className="num">{fmtDateTime(inc.occurred_at)}</span></Detail>
+                  <Detail label="Resolved"><span className="num">{fmtDateTime(inc.resolved_at)}</span></Detail>
+                  <Detail label="Linked risk">{inc.risk_code ? <Link to={`/risks/${inc.risk_code}`} className="num font-medium text-accent underline-offset-4 hover:underline">{inc.risk_code}</Link> : <span className="text-muted">None</span>}</Detail>
+                  {inc.source_id && (
+                    <Detail label="Source record">
+                      <span className="num">{inc.source_id}</span>
+                      <span className="text-muted"> in {inc.source_system}</span>
+                      {inc.source_occurred_at && <div className="text-[13px] text-muted">Original date <span className="num">{inc.source_occurred_at}</span> (the dates in this demo are shifted)</div>}
+                    </Detail>
+                  )}
+                </dl>
+              </Card>
+
+              <Card className="p-5">
+                <h2 className="mb-3 text-[15px] font-semibold">Assignment</h2>
                 <Field label="Assignee" error={errors.assigned_to}>
                   {(f) => <PersonPicker id={f.id} value={assigneeValue} initialLabel={inc.assigned_to_name ?? undefined} onChange={setAssignee} disabled={Boolean(assignReason)} invalid={f['aria-invalid']} />}
                 </Field>
                 <Button onClick={saveAssign} disabledReason={assignReason}>{inc.assigned_to ? 'Reassign' : 'Assign'}</Button>
-              </Section>
+              </Card>
 
-              <Section title="Linked risk">
+              <Card className="p-5">
+                <h2 className="mb-3 text-[15px] font-semibold">Linked risk</h2>
                 <Field label="Risk" error={errors.risk_id}>
                   {(f) => <RiskPicker id={f.id} value={riskValue} onChange={setRiskId} disabled={!pLink.allowed || closed} invalid={f['aria-invalid']} />}
                 </Field>
@@ -108,18 +138,31 @@ function Inner({ code }: { code: string }) {
                   <Button onClick={() => saveLink(riskValue ? Number(riskValue) : null)} disabledReason={linkReason}>{inc.risk_id ? 'Change link' : 'Link risk'}</Button>
                   {inc.risk_id && <Button variant="ghost" onClick={() => saveLink(null)} disabledReason={linkReason}>Unlink</Button>}
                 </div>
-              </Section>
+              </Card>
+
+              <Card className="p-5">
+                <h2 className="mb-3 text-[15px] font-semibold">Add update</h2>
+                <UpdateComposer incident={inc} onSaved={setData} />
+              </Card>
             </div>
 
-            <div className="min-w-0 space-y-12">
-              <Section title="Add update"><UpdateComposer incident={inc} onSaved={setData} /></Section>
-              <Section title="Timeline, newest first">
-                <UpdateTimeline updates={inc.updates} />
-              </Section>
-            </div>
+            <Card className="h-fit min-w-0 p-5">
+              <h2 className="mb-4 text-[15px] font-semibold">Timeline, newest first</h2>
+              <UpdateTimeline updates={inc.updates} />
+            </Card>
           </div>
-        </>
+        </div>
       )}
     </Page>
+  );
+}
+
+/** One row of the Details list: a muted label and its value. */
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <>
+      <dt className="text-muted">{label}</dt>
+      <dd className="m-0 min-w-0 break-words text-[14.5px]">{children}</dd>
+    </>
   );
 }

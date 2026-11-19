@@ -1,0 +1,158 @@
+/* The landing page. Always dark ("Ridge" night colours), whatever theme the app uses. Ported from docs/design/Main.dc.html. */
+.lp { background: #0b1210; color: #e8efeb; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+.lp a { color: #e8efeb; }
+.lp a:hover { color: #fff; }
+.lp .mono { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.lp h1, .lp h2, .lp h3 { margin: 0; }
+.lp p { margin: 0; }
+.lp-wrap { max-width: 1200px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+.lp-muted { color: #a9b8b1; }
+.lp-dim { color: #93a69d; }
+
+/* buttons */
+.lp-btn { text-decoration: none; display: inline-block; transition: transform 0.12s ease, background-color 0.2s ease, border-color 0.2s ease; }
+.lp-btn:hover { transform: translateY(-1px); }
+.lp-btn:active { transform: translateY(1px) scale(0.98); }
+.lp .lp-btn-main { background: #3db58b; color: #07130f; font-weight: 600; font-size: 15.5px; padding: 14px 22px; border-radius: 11px; }
+.lp-btn-line { border: 1px solid rgba(190, 230, 210, 0.24); font-weight: 550; font-size: 15.5px; padding: 14px 22px; border-radius: 11px; }
+.lp-rolebtn { font: inherit; color: #e8efeb; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: 550; padding: 10px 14px; border-radius: 9px; border: 1px solid rgba(190, 230, 210, 0.18); background: #17231f; transition: background-color 0.2s ease, border-color 0.2s ease; }
+.lp-rolebtn:hover { background: #1e2d28; border-color: rgba(190, 230, 210, 0.35); }
+.lp button:focus-visible, .lp a:focus-visible { outline: 2px solid #3db58b; outline-offset: 3px; }
+
+/* navbar */
+.lp-nav { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(12px); border-bottom: 1px solid rgba(190, 230, 210, 0.1); background: rgba(11, 18, 16, 0.86); }
+.lp-nav-in { max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 28px; }
+.lp-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; font-size: 18px; margin-right: auto; }
+.lp-navlinks { display: flex; gap: 28px; font-size: 14.5px; }
+.lp .lp-navlinks a { text-decoration: none; color: #a9b8b1; }
+.lp-nav-login { text-decoration: none; font-size: 14.5px; }
+.lp .lp-nav-cta { text-decoration: none; font-size: 14.5px; font-weight: 600; background: #e8efeb; color: #0b1210; padding: 10px 16px; border-radius: 9px; }
+
+/* hero */
+.lp-hero { position: relative; overflow: hidden; isolation: isolate; padding: 120px 0 0; margin-top: -63px; }
+.lp-hero-bg { position: absolute; left: 0; top: 0; width: 100%; height: 860px; z-index: -1; }
+.lp-hero-row { display: flex; flex-wrap: wrap; align-items: center; gap: 24px 32px; }
+.lp-hero-text { flex: 1 1 560px; display: flex; flex-direction: column; align-items: flex-start; gap: 24px; }
+.lp-herohead { font-size: 62px; line-height: 1.06; letter-spacing: -0.028em; font-weight: 600; max-width: 17ch; min-height: 2.15em; }
+.lp-lede { font-size: 19px; max-width: 56ch; color: #a9b8b1; }
+.lp-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.lp-cursor { display: inline-block; width: 0.07em; height: 0.9em; margin-left: 0.06em; vertical-align: -0.06em; background: #3db58b; animation: lp-blink 1s steps(1) infinite; }
+
+/* the 3D risk landscape */
+.lp-terrainwrap { flex: 1 1 420px; height: 440px; perspective: 1100px; display: flex; align-items: center; justify-content: center; }
+.lp-terrain { width: 420px; height: 420px; position: relative; transform-style: preserve-3d; transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.lp-spin { position: absolute; left: 0; top: 0; width: 420px; height: 420px; transform-style: preserve-3d; animation: lp-spin 16s ease-in-out infinite alternate; }
+.lp-ring { position: absolute; left: 0; top: 0; overflow: visible; }
+.lp-pin { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
+.lp-pin-stem { position: absolute; left: -1px; bottom: 0; width: 2px; transform-origin: 50% 100%; transform: rotateX(-90deg); }
+.lp-pin-head { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; }
+.lp-pin-label { position: absolute; left: 14px; top: -10px; white-space: nowrap; font-size: 12px; color: #e8efeb; background: rgba(17, 26, 23, 0.9); border: 1px solid rgba(190, 230, 210, 0.2); padding: 3px 8px; border-radius: 6px; }
+
+/* product screenshot */
+.lp-shot { margin: 80px auto 0; }
+.lp-shot-frame { background: #f4f6f5; color: #0f1a16; border-radius: 16px 16px 0 0; border: 1px solid rgba(190, 230, 210, 0.25); border-bottom: 0; overflow: hidden; box-shadow: 0 -40px 120px -60px rgba(244, 217, 166, 0.35); }
+.lp-shot-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #e9eeec; border-bottom: 1px solid #dce3e0; }
+.lp-shot-bar i { width: 10px; height: 10px; border-radius: 50%; background: #c9d2ce; display: block; }
+.lp-shot-bar span { margin-left: 12px; font-size: 12px; color: #56665f; }
+.lp-shot-img { display: block; width: 100%; height: auto; }
+
+/* problem */
+.lp-problem { background: #0e1714; border-top: 1px solid rgba(190, 230, 210, 0.08); border-bottom: 1px solid rgba(190, 230, 210, 0.08); }
+.lp-problem-in { padding-top: 104px; padding-bottom: 104px; display: flex; gap: 48px 72px; flex-wrap: wrap; align-items: flex-start; }
+.lp-problem-big { flex: 1 1 520px; font-size: 30px; line-height: 1.35; letter-spacing: -0.015em; font-weight: 500; }
+.lp-problem-side { flex: 1 1 380px; display: flex; flex-direction: column; gap: 14px; color: #a9b8b1; font-size: 16.5px; }
+
+/* sections */
+.lp-section { padding-top: 104px; }
+.lp-h2 { font-size: 36px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 600; }
+.lp-lead { color: #a9b8b1; font-size: 17px; max-width: 60ch; }
+
+/* how it works */
+.lp-steps { position: relative; margin-top: 52px; }
+.lp-steps-track { position: absolute; left: 9px; right: 9px; top: 9px; height: 2px; background: rgba(190, 230, 210, 0.14); }
+.lp-steps-draw { position: absolute; left: 9px; right: 9px; top: 9px; height: 2px; background: #3db58b; }
+.lp-four { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; list-style: none; margin: 0; padding: 0; position: relative; }
+.lp-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.lp-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.lp-step { display: flex; flex-direction: column; gap: 10px; }
+.lp-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(190, 230, 210, 0.25); background: #17231f; display: block; }
+
+/* features */
+.lp-features { display: flex; flex-direction: column; gap: 112px; }
+.lp-feat { display: flex; gap: 64px; align-items: center; flex-wrap: wrap; }
+.lp-feat.rev { flex-direction: row-reverse; }
+.lp-feat-text { flex: 1 1 380px; min-width: 0; }
+.lp-feat-text h3 { font-size: 26px; letter-spacing: -0.018em; line-height: 1.25; font-weight: 600; margin-bottom: 10px; }
+.lp-feat-text p { color: #a9b8b1; }
+.lp-feat-card { flex: 1 1 480px; min-width: 0; background: #111a17; border: 1px solid rgba(190, 230, 210, 0.12); border-radius: 18px; padding: 28px; }
+.lp-heatcell { width: 54px; height: 54px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+.lp-timeline { list-style: none; margin: 0; padding: 0 0 0 20px; border-left: 1px solid rgba(190, 230, 210, 0.2); display: flex; flex-direction: column; gap: 16px; }
+.lp-rolerow { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(190, 230, 210, 0.08); }
+.lp-deptrow { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px; gap: 12px; align-items: center; font-size: 14px; }
+.lp-bartrack { height: 10px; border-radius: 5px; background: #17231f; overflow: hidden; }
+.lp-barfill { height: 10px; border-radius: 5px; }
+
+/* numbers */
+.lp-num-cell { border-top: 1px solid rgba(190, 230, 210, 0.2); padding-top: 18px; }
+.lp-num { font-size: 52px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+
+/* demo */
+.lp-demo-card { background: #111a17; border: 1px solid rgba(190, 230, 210, 0.12); border-radius: 18px; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+.lp-demo-card h3 { font-size: 22px; letter-spacing: -0.02em; margin-bottom: 4px; }
+
+/* FAQ */
+.lp-faq { display: flex; gap: 56px; flex-wrap: wrap; }
+.lp-faq-item { border-top: 1px solid rgba(190, 230, 210, 0.12); }
+.lp-faq-q { font: inherit; width: 100%; min-height: 60px; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: none; border: 0; color: #e8efeb; font-size: 17px; font-weight: 550; text-align: left; cursor: pointer; padding: 16px 0; }
+.lp-faq-q span { color: #93a69d; font-size: 22px; transition: transform 0.2s ease; }
+.lp-faq-a { margin: 0 0 20px; color: #a9b8b1; max-width: 64ch; }
+
+/* closing + footer */
+.lp-cta { position: relative; overflow: hidden; isolation: isolate; margin-top: 120px; padding: 112px 24px 104px; border-top: 1px solid rgba(190, 230, 210, 0.08); }
+.lp-cta-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.lp-footer { border-top: 1px solid rgba(190, 230, 210, 0.08); }
+.lp-footer-in { max-width: 1200px; margin: 0 auto; padding: 36px 24px; display: flex; flex-wrap: wrap; gap: 14px 40px; font-size: 13.5px; color: #93a69d; align-items: center; }
+
+/* motion */
+@keyframes lp-blink { 50% { opacity: 0; } }
+@keyframes lp-drift { from { transform: translate(0, 0); } to { transform: translate(-36px, 14px); } }
+@keyframes lp-dawn { from { opacity: 0.08; } to { opacity: 1; } }
+@keyframes lp-navbg { from { background: rgba(11, 18, 16, 0); border-color: rgba(190, 230, 210, 0); } to { background: rgba(11, 18, 16, 0.86); border-color: rgba(190, 230, 210, 0.1); } }
+@keyframes lp-rise { from { opacity: 0; transform: translateY(70px) perspective(1400px) rotateX(14deg); } to { opacity: 1; transform: none; } }
+@keyframes lp-appear { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes lp-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes lp-lit { from { background: #17231f; border-color: rgba(190, 230, 210, 0.25); } to { background: #3db58b; border-color: #3db58b; } }
+@keyframes lp-fill { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@keyframes lp-spin { from { transform: rotateZ(-4deg); } to { transform: rotateZ(5deg); } }
+.lp-drift { animation: lp-drift 38s ease-in-out infinite alternate; }
+.lp-dawn { animation: lp-dawn 2.6s ease-out both; }
+
+/* scroll-driven effects (browsers without view() timelines simply show the final state) */
+@supports (animation-timeline: view()) {
+  .lp-nav { animation: lp-navbg linear both; animation-timeline: scroll(root); animation-range: 0 160px; }
+  .lp-rise { animation: lp-rise linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; }
+  .lp-appear { animation: lp-appear linear both; animation-timeline: view(); }
+  .lp-draw { transform-origin: left center; animation: lp-draw linear both; animation-timeline: view(); animation-range: entry 30% cover 55%; }
+  .lp-lit { animation: lp-lit linear both; animation-timeline: view(); }
+  .lp-fill { animation: lp-fill linear both; animation-timeline: view(); }
+  .lp-grow { transform-origin: left center; animation: lp-draw linear both; animation-timeline: view(); }
+}
+@media (max-width: 760px) { .lp-terrainwrap { display: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-spin, .lp-drift, .lp-dawn, .lp-cursor, .lp-nav, .lp-rise, .lp-appear, .lp-draw, .lp-lit, .lp-fill, .lp-grow { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .lp-terrain { transition: none; }
+}
+@media (max-width: 960px) {
+  .lp-navlinks { display: none; }
+  .lp-four, .lp-three, .lp-two { grid-template-columns: 1fr; }
+  .lp-feat, .lp-feat.rev { flex-direction: column; align-items: stretch; gap: 28px; }
+  .lp-herohead { font-size: 48px; }
+}
+@media (max-width: 480px) {
+  .lp-herohead { font-size: 40px; }
+  .lp-problem-big { font-size: 24px; }
+  .lp-h2 { font-size: 30px; }
+  .lp-num { font-size: 42px; }
+  .lp-feat-card { padding: 20px; }
+  .lp-heatcell { width: 40px; height: 40px; }
+}

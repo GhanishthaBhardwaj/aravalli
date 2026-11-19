@@ -6,6 +6,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useSession } from './providers';
 import { Sidebar } from '../components/shell/Sidebar';
 import { Topbar } from '../components/shell/Topbar';
+import { DataNote } from '../components/ui/DataNote';
 
 export function Layout({ children }: { children: ReactNode }) {
   const { organisation } = useSession();
@@ -53,7 +54,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <main className="app-main mx-auto w-full max-w-[1180px] flex-1 px-4 py-10 md:px-10 md:py-14">{children}</main>
         <footer className="app-footer mx-auto w-full max-w-[1180px] px-4 pb-8 text-[13px] text-subtle md:px-10">
           <span className="font-medium text-muted">{organisation.name}</span>
-          {organisation.data_note && <span data-testid="data-note"> · {organisation.data_note}</span>}
+          {organisation.data_note && <div className="mt-1"><DataNote note={organisation.data_note} short /></div>}
         </footer>
       </div>
     </div>
