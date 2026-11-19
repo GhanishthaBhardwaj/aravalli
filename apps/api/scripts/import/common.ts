@@ -15,7 +15,9 @@ export function openPool(): Pool {
   const envFile = join(repoRoot, '.env');
   if (existsSync(envFile)) process.loadEnvFile(envFile);
   if (arg('db')) process.env.DB_NAME = arg('db');
-  return createPool(readDbConfig(process.env), 4);
+  const config = readDbConfig(process.env);
+  console.log(`Database: ${config.database} on ${config.host}${config.sslCa ? ' (SSL)' : ''}`);
+  return createPool(config, 4);
 }
 
 export function arg(name: string): string | undefined {
@@ -58,11 +60,19 @@ export const daysBetween = (from: string, to: string): number => Math.round((Dat
 /** A UTC millisecond timestamp as 'YYYY-MM-DD HH:MM:SS'. */
 export const sqlTime = (ms: number): string => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
 
-const FIRST = ['Aarav', 'Maya', 'Liam', 'Sofia', 'Noah', 'Priya', 'Ethan', 'Chloe', 'Rohan', 'Grace', 'Marcus', 'Isha', 'Owen', 'Leila', 'Diego', 'Hana', 'Felix', 'Nadia', 'Caleb', 'Tara', 'Jonas', 'Amara', 'Victor', 'Zoe', 'Samir', 'Elena', 'Theo', 'Ruth', 'Kofi', 'Mina'];
-const LAST = ['Sharma', 'Okafor', 'Brennan', 'Castillo', 'Novak', 'Iyer', 'Hartley', 'Nguyen', 'Bergstrom', 'Mehta', 'Kowalski', 'Adeyemi', 'Fischer', 'Ramos', 'Tanaka', 'Whitfield', 'Dube', 'Larsen', 'Costa', 'Banerjee', 'Moreau', 'Haddad', 'Pillai', 'Sutton', 'Volkov', 'Osei', 'Reyes', 'Lindqvist', 'Kapoor', 'Walsh'];
-/** The n-th made-up person. */
-export const personName = (n: number): [string, string] => [FIRST[n % FIRST.length]!, LAST[(Math.floor(n / FIRST.length) * 7 + n) % LAST.length]!];
+/**
+ * Staff have role-style names ("Production Supervisor 1", "Plant Safety Officer"), never invented personal names: the people in
+ * a demonstration organisation are not real, and pretending they are would be dishonest. The name is split at the first space
+ * into the first_name and last_name columns, so "Production Supervisor 1" is stored as "Production" + "Supervisor 1".
+ */
+export const splitName = (name: string): [string, string] => {
+  const i = name.indexOf(' ');
+  return i < 0 ? [name, '-'] : [name.slice(0, i), name.slice(i + 1)];
+};
+/** 'Production Supervisor 1' -> 'production.supervisor.1' */
+export const emailName = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
 
+/** headTitle is the department head's job title and name; staffTitle is numbered per person ("Production Supervisor 1", "... 2"). */
 export interface DeptSpec { code: string; name: string; headTitle: string; staffTitle: string }
 export interface StaffMember { employee_id: number; department_id: number; role: string }
 export interface OrgSetup {
@@ -90,6 +100,8 @@ export interface OrgSpec {
 export async function ensureOrganisation(pool: Pool, spec: OrgSpec): Promise<OrgSetup> {
   await run(pool, `INSERT INTO organisation (name, slug, is_demo, data_note, created_at) VALUES (?, ?, 0, ?, ?)
                    ON DUPLICATE KEY UPDATE name = VALUES(name), data_note = VALUES(data_note)`, [spec.name, spec.slug, spec.dataNote, spec.createdAt]);
+  // To be honest about where the data comes from, `dataNote` is always three lines: "Source: ...", "Changed: ...", "Added: ...".
+  // The web app shows them as a short source note.
   const org = (await one<{ organisation_id: number }>(pool, 'SELECT organisation_id FROM organisation WHERE slug = ?', [spec.slug]))!;
   const organisationId = org.organisation_id;
 
@@ -99,23 +111,18 @@ export async function ensureOrganisation(pool: Pool, spec: OrgSpec): Promise<Org
   const deptRows = await rows<{ department_id: number; code: string }>(pool, 'SELECT department_id, code FROM department WHERE organisation_id = ?', [organisationId]);
   const departments = new Map(deptRows.map((r) => [r.code, r.department_id]));
 
-  const people: Array<{ code: string; dept: string; role: string; title: string }> = [];
+  const people: Array<{ code: string; dept: string; role: string; title: string; name: string }> = [];
   let n = 0;
   for (const d of spec.departments) {
-    people.push({ code: `EMP-${1001 + n++}`, dept: d.code, role: 'Department Head', title: d.headTitle });
-    for (let i = 0; i < spec.staffPerDept; i++) people.push({ code: `EMP-${1001 + n++}`, dept: d.code, role: 'Employee', title: d.staffTitle });
+    people.push({ code: `EMP-${1001 + n++}`, dept: d.code, role: 'Department Head', title: d.headTitle, name: d.headTitle });
+    for (let i = 1; i <= spec.staffPerDept; i++) people.push({ code: `EMP-${1001 + n++}`, dept: d.code, role: 'Employee', title: d.staffTitle, name: `${d.staffTitle} ${i}` });
   }
-  for (const [role, dept, title] of spec.central) people.push({ code: `EMP-${1001 + n++}`, dept, role, title });
+  for (const [role, dept, title] of spec.central) people.push({ code: `EMP-${1001 + n++}`, dept, role, title, name: title });
 
-  let k = 0;
-  const seen = new Set<string>();
   const values: unknown[][] = [];
-  const slugify = (a: string, b: string) => `${a}.${b}`.toLowerCase().replace(/[^a-z.]/g, '');
   for (const p of people) {
-    let [first, last] = personName(k++);
-    while (seen.has(slugify(first, last))) [first, last] = personName(k++);
-    seen.add(slugify(first, last));
-    values.push([organisationId, p.code, departments.get(p.dept), first, last, `${slugify(first, last)}@${spec.domain}`, p.title, p.role, spec.createdAt]);
+    const [first, last] = splitName(p.name);
+    values.push([organisationId, p.code, departments.get(p.dept), first, last, `${emailName(p.name)}@${spec.domain}`, p.title, p.role, spec.createdAt]);
   }
   await run(pool, `INSERT INTO employee (organisation_id, employee_code, department_id, first_name, last_name, email, job_title, role, created_at) VALUES ?
                    ON DUPLICATE KEY UPDATE job_title = VALUES(job_title)`, [values]);

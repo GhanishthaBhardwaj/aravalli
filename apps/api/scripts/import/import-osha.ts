@@ -1,6 +1,6 @@
-// Imports OSHA Severe Injury Reports (US federal OSHA, public) as the organisation "Ironbridge Manufacturing Group", a large
-// manufacturing group with many plants. Its incidents are real OSHA records from many different US manufacturers: no single
-// company had them all, and no employer is named here.
+// Imports OSHA Severe Injury Reports (US federal OSHA, public) as the demonstration organisation named after its source,
+// "OSHA Severe Injury Reports · US manufacturing 2024–2025". Its incidents are real OSHA records from many different US
+// manufacturers: no single company had them all, and no employer is named here. Staff have role-style names, not personal ones.
 //
 //   npm run import:osha -w @aravalli/api                    manufacturing, 2024 onwards (about 5,500 rows)
 //   npm run import:osha -w @aravalli/api -- --all-manufacturing --db aravalli_perf     every manufacturing record since 2015
@@ -24,16 +24,18 @@ export const OSHA_END_BECOMES = '2026-11-02';
 export const OSHA_SHIFT_DAYS = daysBetween(OSHA_DATA_ENDS, OSHA_END_BECOMES);
 const SHIFT = OSHA_SHIFT_DAYS * DAY;
 const SYSTEM = 'osha-severe-injury';
+export const ORG_NAME = 'OSHA Severe Injury Reports · US manufacturing 2024–2025';
+export const ORG_SLUG = 'osha-manufacturing';
 const OPEN_FROM = Date.UTC(2025, 9, 1); // records on or after 1 Oct 2025 are still being worked
 const RESOLVED_FROM = Date.UTC(2025, 7, 1); // 1 Aug to 30 Sep 2025: a mix of Resolved and Closed
 
 const DEPTS = [
-  { code: 'PRD', name: 'Production', headTitle: 'Head of Production', staffTitle: 'Production Operator' },
+  { code: 'PRD', name: 'Production', headTitle: 'Head of Production', staffTitle: 'Production Supervisor' },
   { code: 'MNT', name: 'Maintenance', headTitle: 'Head of Maintenance', staffTitle: 'Maintenance Technician' },
   { code: 'WHS', name: 'Warehouse', headTitle: 'Head of Warehousing', staffTitle: 'Warehouse Associate' },
   { code: 'LOG', name: 'Logistics', headTitle: 'Head of Logistics', staffTitle: 'Logistics Coordinator' },
   { code: 'QLT', name: 'Quality', headTitle: 'Head of Quality', staffTitle: 'Quality Inspector' },
-  { code: 'EHS', name: 'Corporate EHS', headTitle: 'Director of Environment, Health & Safety', staffTitle: 'EHS Specialist' },
+  { code: 'EHS', name: 'Corporate EHS', headTitle: 'Director of Health and Safety', staffTitle: 'EHS Specialist' },
 ];
 
 const tidy = (s: string): string => s.trim().replace(/\s{2,}/g, ' - ');
@@ -97,10 +99,14 @@ async function main() {
   const col = (r: string[], n: string): string => r[c[n]!] ?? '';
 
   const setup = await ensureOrganisation(pool, {
-    name: 'Ironbridge Manufacturing Group', slug: 'ironbridge-manufacturing', domain: 'ironbridge.example', createdAt: '2026-01-05 09:00:00',
-    dataNote: `Ironbridge is an invented manufacturing group. Its incidents are real OSHA Severe Injury Reports from many different US manufacturers (federal OSHA public data, 2024 to Nov 2025); no employer is named. Dates are shifted forward by ${OSHA_SHIFT_DAYS} days so the newest record is near today; the original date is kept on each incident. Staff names are invented.`,
+    name: ORG_NAME, slug: ORG_SLUG, domain: 'osha-manufacturing.example', createdAt: '2026-01-05 09:00:00',
+    dataNote: [
+      'Source: OSHA Severe Injury Reports, US Department of Labor, https://www.osha.gov/severe-injury-reports (manufacturing, January 2024 to November 2025).',
+      `Changed: dates shifted forward by ${OSHA_SHIFT_DAYS} days (the original date is kept on each incident); employer names and addresses removed.`,
+      'Added: the risk register and the staff accounts, written for this demo.',
+    ].join('\n'),
     departments: DEPTS, staffPerDept: 8,
-    central: [['Org Admin', 'EHS', 'VP, Operations Excellence'], ['Risk Officer', 'EHS', 'Group Risk Manager'], ['Risk Officer', 'EHS', 'Plant Safety Risk Analyst'], ['Auditor', 'EHS', 'Internal Safety Auditor']],
+    central: [['Org Admin', 'EHS', 'Operations Excellence Director'], ['Risk Officer', 'EHS', 'Group Risk Manager'], ['Risk Officer', 'EHS', 'Plant Safety Officer'], ['Auditor', 'EHS', 'Internal Safety Auditor']],
   });
   const { ids: have, maxCode } = await existingSources(pool, setup.organisationId, SYSTEM);
 
@@ -173,7 +179,7 @@ async function main() {
   const demoUsers = await ensureDemoUsers(pool, setup, 'PRD', '2026-01-05 09:00:00');
   const total = await one<{ n: number }>(pool, 'SELECT COUNT(*) AS n FROM incident WHERE organisation_id = ?', [setup.organisationId]);
   const byStatus = await rows<{ status: string; n: number }>(pool, 'SELECT status, COUNT(*) AS n FROM incident WHERE organisation_id = ? GROUP BY status ORDER BY n DESC', [setup.organisationId]);
-  console.log(`Ironbridge Manufacturing Group (organisation ${setup.organisationId}): ${inserted} incidents inserted this run, ${total!.n} in total; ${logged} log entries; ${risks.risks} risks created, ${risks.linked} incidents newly linked; ${demoUsers} demo accounts created.`);
+  console.log(`${ORG_NAME} (organisation ${setup.organisationId}): ${inserted} incidents inserted this run, ${total!.n} in total; ${logged} log entries; ${risks.risks} risks created, ${risks.linked} incidents newly linked; ${demoUsers} demo accounts created.`);
   console.log(`Scope: ${everything ? 'all manufacturing 2015-2025 (performance test)' : 'manufacturing 2024-2025'}; dates shifted by +${OSHA_SHIFT_DAYS} days. Status: ${byStatus.map((s) => `${s.status} ${s.n}`).join(', ')}. (${((Date.now() - started) / 1000).toFixed(1)}s)`);
   await pool.end();
 }

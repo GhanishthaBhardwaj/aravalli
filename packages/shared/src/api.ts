@@ -66,6 +66,8 @@ export interface IncidentListItem {
   resolved_at: string | null;
   source_system: string | null;
   source_id: string | null;
+  /** The record's original timestamp in the public dataset, before the demo's dates were shifted ('YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'). */
+  source_occurred_at: string | null;
 }
 
 export interface IncidentDetail extends IncidentListItem {

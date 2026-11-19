@@ -10,8 +10,8 @@ Volumes:
 
 | Name | Database | Incidents in the organisation |
 | --- | --- | --- |
-| **UCI** (Meridian IT Services) | `aravalli_dev` | **24,802** |
-| **OSHA, 2024–2025** (Ironbridge, the shipped dataset) | `aravalli_dev` | **5,481** |
+| **UCI** (UCI ServiceNow Incident Log) | `aravalli_dev` | **24,802** |
+| **OSHA, 2024–2025** (OSHA Severe Injury Reports, the shipped dataset) | `aravalli_dev` | **5,481** |
 | **OSHA, all manufacturing** (performance test only) | `aravalli_perf` (a separate database, not `aravalli_test`, because the test database is rebuilt on every test run) | **34,472** |
 
 ## What changed, and why

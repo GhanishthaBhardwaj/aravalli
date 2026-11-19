@@ -25,7 +25,7 @@ then `npm run db:migrate` and `npm run db:seed`).
 - [ ] Reports: all three tabs load; **Export CSV** downloads a file; **Print** opens the print preview with only that report.
 
 ## 4. Roles (3 min)
-- [ ] Sign out (account menu, top right), then on the sign-in page use the demo buttons for **Ironbridge**. As an **Auditor**: every button that would change something is disabled, with a reason on hover.
+- [ ] Sign out (account menu, top right), then on the sign-in page use the demo buttons for the **OSHA Severe Injury Reports** organisation. As an **Auditor**: every button that would change something is disabled, with a reason on hover.
 - [ ] As an **Employee**: the menu has only Overview, Incident Register and Report Incident. They can report an incident but cannot assign, link or close; an incident they did not report shows "not found".
 - [ ] As a **Department Head**: only their department's risks and incidents appear; no Reports or Heat Map.
 - [ ] Reload the page: you are still signed in (the session cookie), and the account menu names you.
@@ -53,5 +53,5 @@ Note the page address, what you clicked, and what you expected. If the page show
 - [ ] Back as Org Admin: **Set password** for them; the private window is signed out and the old password no longer works. Then change their role, then deactivate them: their next click sends them to sign-in.
 - [ ] Try to demote or deactivate yourself as the only Org Admin: refused.
 - [ ] The sign-in page has no "forgot password" link; it tells people to ask their Org Admin.
-- [ ] Sign in as the Meridian Org Admin, note an incident code, then sign in as Ironbridge's and open `/incidents/<that code>`: "not found".
+- [ ] Sign in as the UCI ServiceNow Org Admin, note an incident code, then sign in as the OSHA organisation's and open `/incidents/<that code>`: "not found".
 - [ ] The footer of every screen of a demo organisation states the date shift and the data source.

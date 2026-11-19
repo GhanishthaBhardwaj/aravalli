@@ -41,7 +41,7 @@ const NULLABLE_SORTS = new Set(['assigned_to', 'resolved_at']);
 const SELECT = `SELECT i.incident_id, i.incident_code, i.title, i.severity, i.status, i.department_id, d.name AS department_name,
        i.reported_by, CONCAT(rp.first_name, ' ', rp.last_name) AS reported_by_name,
        i.assigned_to, CONCAT(ag.first_name, ' ', ag.last_name) AS assigned_to_name,
-       i.risk_id, rk.risk_code, i.occurred_at, i.reported_at, i.resolved_at, i.source_system, i.source_id
+       i.risk_id, rk.risk_code, i.occurred_at, i.reported_at, i.resolved_at, i.source_system, i.source_id, i.source_occurred_at
 FROM incident i
 JOIN department d  ON d.department_id = i.department_id AND d.organisation_id = i.organisation_id
 JOIN employee rp   ON rp.employee_id = i.reported_by AND rp.organisation_id = i.organisation_id

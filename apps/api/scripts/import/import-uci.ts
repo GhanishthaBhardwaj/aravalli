@@ -1,5 +1,5 @@
 // Imports the UCI "Incident management process enriched event log" (a real, anonymised ServiceNow log, CC BY 4.0) as the
-// organisation "Meridian IT Services".
+// demonstration organisation named after its source, "UCI ServiceNow Incident Log · anonymised IT company".
 //
 //   npm run import:uci -w @aravalli/api            (database from .env; --db <name> to target another one)
 //
@@ -22,6 +22,8 @@ export const UCI_NEWEST_BECOMES = '2026-11-02';
 export const UCI_SHIFT_DAYS = daysBetween(UCI_CUTOFF, UCI_NEWEST_BECOMES);
 const SHIFT = UCI_SHIFT_DAYS * DAY;
 const SYSTEM = 'servicenow-uci';
+export const ORG_NAME = 'UCI ServiceNow Incident Log · anonymised IT company';
+export const ORG_SLUG = 'uci-servicenow';
 
 const DEPTS = [
   { code: 'SD', name: 'Service Desk', headTitle: 'Head of Service Desk', staffTitle: 'Service Desk Analyst' },
@@ -93,8 +95,12 @@ async function main() {
   }
 
   const setup = await ensureOrganisation(pool, {
-    name: 'Meridian IT Services', slug: 'meridian-it-services', domain: 'meridian-it.example', createdAt: '2026-01-05 09:00:00',
-    dataNote: `Incidents are real, anonymised ServiceNow tickets from the UCI "Incident management process enriched event log" (CC BY 4.0). Dates are shifted forward by ${UCI_SHIFT_DAYS} days so the newest ticket is near today; the original timestamp is kept on each incident. Staff and department names are invented: the source is anonymised.`,
+    name: ORG_NAME, slug: ORG_SLUG, domain: 'uci-servicenow.example', createdAt: '2026-01-05 09:00:00',
+    dataNote: [
+      'Source: UCI Machine Learning Repository, Incident management process enriched event log (an anonymised ServiceNow log, CC BY 4.0), https://archive.ics.uci.edu/dataset/498',
+      `Changed: dates shifted forward by ${UCI_SHIFT_DAYS.toLocaleString('en-US')} days (the original timestamp is kept on each incident); ServiceNow events collapsed into one incident per ticket as of 10 January 2017.`,
+      'Added: the risk register and the staff accounts, written for this demo.',
+    ].join('\n'),
     departments: DEPTS, staffPerDept: 6,
     central: [['Org Admin', 'SD', 'IT Operations Director'], ['Risk Officer', 'SEC', 'IT Risk Manager'], ['Risk Officer', 'SD', 'Service Risk Analyst'], ['Auditor', 'SEC', 'Internal IT Auditor']],
   });
@@ -192,7 +198,7 @@ async function main() {
   const demoUsers = await ensureDemoUsers(pool, setup, 'SD', '2026-01-05 09:00:00');
   const total = await one<{ n: number }>(pool, 'SELECT COUNT(*) AS n FROM incident WHERE organisation_id = ?', [setup.organisationId]);
   const byStatus = await rows<{ status: string; n: number }>(pool, 'SELECT status, COUNT(*) AS n FROM incident WHERE organisation_id = ? GROUP BY status ORDER BY n DESC', [setup.organisationId]);
-  console.log(`Meridian IT Services (organisation ${setup.organisationId}): ${inserted} incidents inserted this run, ${total!.n} in total; ${logged} log entries; ${risks.risks} risks created, ${risks.linked} incidents newly linked; ${demoUsers} demo accounts created.`);
+  console.log(`${ORG_NAME} (organisation ${setup.organisationId}): ${inserted} incidents inserted this run, ${total!.n} in total; ${logged} log entries; ${risks.risks} risks created, ${risks.linked} incidents newly linked; ${demoUsers} demo accounts created.`);
   console.log(`Cutoff ${UCI_CUTOFF}; dates shifted by +${UCI_SHIFT_DAYS} days. Status at cutoff: ${byStatus.map((s) => `${s.status} ${s.n}`).join(', ')}. (${((Date.now() - started) / 1000).toFixed(1)}s)`);
   await pool.end();
 }

@@ -1,6 +1,6 @@
 // Measures the API on a real data volume. Starts the app in this process and calls it over HTTP, one request at a time.
 //
-//   npm run perf -w @aravalli/api -- --org ironbridge-manufacturing [--db aravalli_perf] [--label "OSHA 34,472"] [--runs 300]
+//   npm run perf -w @aravalli/api -- --org osha-manufacturing [--db aravalli_perf] [--label "OSHA 34,472"] [--runs 300]
 //
 // For each endpoint: 30 warm-up requests (not counted), then --runs timed requests; prints p50 and p95 in milliseconds as a
 // markdown table row so the numbers in docs/performance.md can be reproduced.
@@ -15,7 +15,7 @@ loadEnvFile();
 const argv = process.argv.slice(2);
 const opt = (name: string): string | undefined => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined; };
 if (opt('db')) process.env.DB_NAME = opt('db');
-const slug = opt('org') ?? 'ironbridge-manufacturing';
+const slug = opt('org') ?? 'osha-manufacturing';
 const runs = Number(opt('runs') ?? 300);
 const config = readAppConfig(process.env);
 const pool = createPool(config.db);
