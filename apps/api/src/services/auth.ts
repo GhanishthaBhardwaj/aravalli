@@ -2,7 +2,7 @@
 //  * Login errors never say which half was wrong, and an unknown email costs the same time as a wrong password.
 //  * Refresh tokens rotate: each one can be used once. Presenting a used one means it was copied, so the whole login (the
 //    "family" of tokens) is revoked and the real user has to sign in again.
-//  * Nothing here sends email. An Org Admin adds people directly (with a first password) and can set a new password for them.
+//  * An Org Admin adds people directly (with a first password) and can set a new password for them.
 import {
   hasPermission, isEmail, ROLES, validatePassword, validateSignup,
   type Employee, type Permission, type Role, type SessionUser,

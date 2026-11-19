@@ -77,7 +77,7 @@ export function Users() {
   };
 
   return (
-    <Page title="Users" description="Who can sign in to this organisation and what they may do. Add people here: there is no email step, so give them the password yourself." loading={users.loading || departments.loading} error={users.error ?? departments.error} onRetry={users.reload}>
+    <Page title="Users" loading={users.loading || departments.loading} error={users.error ?? departments.error} onRetry={users.reload}>
       {rowError && <div role="alert" className="mb-6 rounded-lg border border-fg bg-surface-2 px-4 py-3 text-[14px] font-medium">{rowError}</div>}
 
       <Section title="Add a person" className="mb-14">
@@ -138,7 +138,7 @@ export function Users() {
         </Card>
       </Section>
 
-      <Modal open={pwFor !== null} onClose={() => setPwFor(null)} title={pwFor ? `Set a password for ${pwFor.first_name} ${pwFor.last_name}` : ''} description="They are signed out everywhere and use this password next time.">
+      <Modal open={pwFor !== null} onClose={() => setPwFor(null)} title={pwFor ? `Set a password for ${pwFor.first_name} ${pwFor.last_name}` : ''}>
         <form onSubmit={savePassword} noValidate>
           <Field label="New password" error={pwError} hint="10+ characters, a letter and a number.">{(p) => <Input {...p} type="text" autoComplete="off" value={pw} onChange={(e) => setPw(e.target.value)} />}</Field>
           <div className="flex justify-end gap-2"><Button onClick={() => setPwFor(null)}>Cancel</Button><Button type="submit" variant="primary">Set password</Button></div>

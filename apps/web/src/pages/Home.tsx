@@ -32,7 +32,7 @@ export function Home() {
 const link = 'font-medium text-fg underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-fg';
 
 const incidentColumns: Column<IncidentListItem>[] = [
-  { key: 'code', header: 'Code', render: (i) => <span className="num text-[13px]">{i.incident_code}</span> },
+  { key: 'code', header: 'Code', render: (i) => <span className="code text-[13px]">{i.incident_code}</span> },
   { key: 'title', header: 'Title', render: (i) => <span className="font-medium">{i.title}</span> },
   { key: 'sev', header: 'Severity', hideBelow: 'sm', render: (i) => <SeverityBadge severity={i.severity} /> },
   { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
@@ -61,10 +61,7 @@ function DepartmentHome() {
     <Page
       title={`${name}`}
       description={data && (
-        <>
-          You are the Head of {name}, so this is everything in {name} and nothing else.{' '}
-          {data.unassigned > 0 ? <><strong className="font-semibold text-fg">{data.unassigned} open incidents</strong> have nobody assigned. <Link to="/incidents?assignee=none" className={link}>Assign them</Link>.</> : 'Every open incident has an owner.'}
-        </>
+        data.unassigned > 0 ? <><strong className="font-semibold text-fg">{data.unassigned} open incidents</strong> have nobody assigned. <Link to="/incidents?assignee=none" className={link}>Assign them</Link></> : undefined
       )}
       loading={loading}
       error={error}
@@ -93,7 +90,7 @@ function DepartmentHome() {
                       <Link to={`/risks/${r.risk_code}`} className="flex items-center gap-4 py-4 transition-colors hover:bg-surface-2 sm:-mx-3 sm:rounded-lg sm:px-3">
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[16px] font-medium">{r.title}</div>
-                          <div className="num mt-1 text-[13px] text-muted">{r.risk_code}</div>
+                          <div className="code mt-1 text-[13px] text-muted">{r.risk_code}</div>
                         </div>
                         <ScoreBadge score={r.risk_score} band={r.severity_band === 'Unrated' ? null : r.severity_band} />
                       </Link>
@@ -129,7 +126,6 @@ function EmployeeHome() {
   return (
     <Page
       title={`Hello, ${actor.first_name}`}
-      description="Report something that went wrong, and follow the incidents you reported or were given. You see only those."
       loading={loading}
       error={error}
       onRetry={reload}
@@ -149,7 +145,7 @@ function EmployeeHome() {
               caption="Your most recent incidents"
               columns={incidentColumns}
               noun="incidents"
-              empty={<EmptyState title="You have not reported anything yet" body="When something goes wrong, report it here so the right people can act." action={<Button to="/incidents/new" variant="primary">Report an incident</Button>} />}
+              empty={<EmptyState title="You have not reported anything yet" action={<Button to="/incidents/new" variant="primary">Report an incident</Button>} />}
             />
           </Section>
         </>

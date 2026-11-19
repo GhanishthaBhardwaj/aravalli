@@ -12,7 +12,7 @@ export function UpdateTimeline({ updates }: { updates: (IncidentUpdate & { updat
             <span
               aria-hidden="true"
               className="absolute -left-[26px] top-1.5 h-[11px] w-[11px] rounded-full border-2 border-surface"
-              style={{ background: u.status_to && u.status_from ? 'var(--accent)' : 'var(--sev-low)' }}
+              style={{ background: u.status_to && u.status_from ? 'var(--fg)' : 'var(--sev-low)' }}
             />
             <div className="flex justify-between gap-2.5">
               <span className="font-semibold">{title}</span>

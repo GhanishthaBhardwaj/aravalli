@@ -78,7 +78,7 @@ function Inner({ code }: { code: string }) {
           <div className="-mt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
             <SeverityBadge severity={inc.severity} />
             <StatusBadge status={inc.status} />
-            <span className="num text-[12.5px] text-muted">{inc.incident_code} · reported {fmtDateTime(inc.reported_at)}</span>
+            <span className="text-[12.5px] text-muted"><span className="code">{inc.incident_code}</span> · reported {fmtDateTime(inc.reported_at)}</span>
             <span className="text-[13.5px] text-muted">· {['Resolved', 'Closed'].includes(inc.status) ? 'Resolved after' : 'Open for'} <span className="num">{days}</span> {days === 1 ? 'day' : 'days'}</span>
           </div>
 
@@ -87,7 +87,7 @@ function Inner({ code }: { code: string }) {
               const done = i <= stageIndex;
               const when = reached(stage);
               return (
-                <li key={stage} aria-current={i === stageIndex ? 'step' : undefined} className="border-t-[3px] pt-2" style={{ borderColor: done ? 'var(--accent)' : 'var(--line)' }}>
+                <li key={stage} aria-current={i === stageIndex ? 'step' : undefined} className="border-t-[3px] pt-2" style={{ borderColor: i === stageIndex ? 'var(--accent)' : done ? 'var(--fg)' : 'var(--line)' }}>
                   <div className={done ? (i === stageIndex ? 'font-bold' : 'font-medium') : 'font-medium text-muted'}>{stage}</div>
                   <div className="num text-[12px] text-muted">{when ? fmtDateTime(when) : 'Not yet'}</div>
                 </li>
@@ -110,7 +110,7 @@ function Inner({ code }: { code: string }) {
                   <Detail label="Assigned to">{inc.assigned_to_name ?? <span className="text-muted">Unassigned</span>}</Detail>
                   <Detail label="Occurred"><span className="num">{fmtDateTime(inc.occurred_at)}</span></Detail>
                   <Detail label="Resolved"><span className="num">{fmtDateTime(inc.resolved_at)}</span></Detail>
-                  <Detail label="Linked risk">{inc.risk_code ? <Link to={`/risks/${inc.risk_code}`} className="num font-medium text-accent underline-offset-4 hover:underline">{inc.risk_code}</Link> : <span className="text-muted">None</span>}</Detail>
+                  <Detail label="Linked risk">{inc.risk_code ? <Link to={`/risks/${inc.risk_code}`} className="code font-medium text-accent underline-offset-4 hover:underline">{inc.risk_code}</Link> : <span className="text-muted">None</span>}</Detail>
                   {inc.source_id && (
                     <Detail label="Source record">
                       <span className="num">{inc.source_id}</span>

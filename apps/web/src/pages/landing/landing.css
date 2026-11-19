@@ -1,4 +1,4 @@
-/* The landing page. Always dark ("Ridge" night colours), whatever theme the app uses. Ported from docs/design/Main.dc.html. */
+/* The landing page. Always dark ("Ridge" night colours), whatever theme the app uses. */
 .lp { background: #0b1210; color: #e8efeb; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
 .lp a { color: #e8efeb; }
 .lp a:hover { color: #fff; }
@@ -105,6 +105,11 @@
 .lp-faq-item { border-top: 1px solid rgba(190, 230, 210, 0.12); }
 .lp-faq-q { font: inherit; width: 100%; min-height: 60px; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: none; border: 0; color: #e8efeb; font-size: 17px; font-weight: 550; text-align: left; cursor: pointer; padding: 16px 0; }
 .lp-faq-q span { color: #93a69d; font-size: 22px; transition: transform 0.2s ease; }
+.lp-reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
+.lp-reveal.lp-in { opacity: 1; transform: none; }
+.lp-faq-wrap { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 0.3s var(--ease), visibility 0s linear 0.3s; }
+.lp-faq-wrap > div { overflow: hidden; }
+.lp-faq-wrap.lp-open { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 0.3s var(--ease), visibility 0s; }
 .lp-faq-a { margin: 0 0 20px; color: #a9b8b1; max-width: 64ch; }
 
 /* closing + footer */
@@ -139,6 +144,8 @@
 }
 @media (max-width: 760px) { .lp-terrainwrap { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
+  .lp-reveal { opacity: 1; transform: none; transition: none; }
+  .lp-faq-wrap { transition: none; }
   .lp-spin, .lp-drift, .lp-dawn, .lp-cursor, .lp-nav, .lp-rise, .lp-appear, .lp-draw, .lp-lit, .lp-fill, .lp-grow { animation: none !important; opacity: 1 !important; transform: none !important; }
   .lp-terrain { transition: none; }
 }

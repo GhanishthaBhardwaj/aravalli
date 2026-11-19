@@ -63,7 +63,7 @@ export function RiskRegister() {
   return (
     <Page
       title="Risk Register"
-      description={organisation.data_note ? SAMPLE_REGISTER : 'Every registered risk, scored by its latest assessment.'}
+      description={organisation.data_note ? SAMPLE_REGISTER : undefined}
       actions={
         <Button variant="primary" to="/risks/new" disabledReason={p.allowed ? undefined : p.reason}>
           <PlusIcon className="h-4 w-4" aria-hidden="true" /> Register risk
@@ -89,7 +89,7 @@ export function RiskRegister() {
           error={error?.message}
           onRetry={reload}
           server={{ total: data?.page.total ?? 0, page: list.page, pageSize: PAGE_SIZE, sort: list.sort, dir: list.dir, onSort: list.setSort, onPage: list.setPage }}
-          empty={<EmptyState title="No risks match these filters" body="Remove a filter or widen the search." action={<Button onClick={f.clear}>Clear filters</Button>} />}
+          empty={<EmptyState title="No risks match these filters" action={<Button onClick={f.clear}>Clear filters</Button>} />}
         />
       </Card>
     </Page>

@@ -1,4 +1,3 @@
-import { motion } from 'motion/react';
 import { bandFor, IMPACT_LABELS, LIKELIHOOD_LABELS } from '@aravalli/shared';
 import type { HeatCell } from '@aravalli/shared';
 import { BAND_CLASS } from '../ui/Badge';
@@ -39,21 +38,18 @@ export function HeatMap({ cells, onSelect, selected, reveal, compact }: Props) {
                 const n = c.risks.length;
                 const on = selected?.likelihood === l && selected?.impact === i;
                 return (
-                  <motion.button
+                  <button
                     key={`${l}-${i}`}
                     type="button"
                     disabled={!onSelect}
                     onClick={() => onSelect?.(c)}
                     aria-pressed={onSelect ? on : undefined}
                     aria-label={`Likelihood ${l}, impact ${i}, ${band}, ${n} ${n === 1 ? 'risk' : 'risks'}`}
-                    className={`flex items-center justify-center rounded-[10px] ${BAND_CLASS[band]} ${size} ${onSelect ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
-                    style={{ outline: on ? '3px solid var(--fg)' : 'none', outlineOffset: 2 }}
-                    initial={wave ? { opacity: 0, scale: 0.6 } : false}
-                    animate={{ opacity: n ? 1 : 0.28, scale: 1 }}
-                    transition={{ duration: 0.3, delay: wave ? (l - 1 + (i - 1)) * 0.045 : 0, ease: [0.2, 0.7, 0.2, 1] }}
+                    className={`flex items-center justify-center rounded-[10px] transition-[filter,transform] duration-150 ${wave ? 'cell-in' : ''} ${BAND_CLASS[band]} ${size} ${onSelect ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
+                    style={{ outline: on ? '3px solid var(--fg)' : 'none', outlineOffset: 2, opacity: n ? 1 : 0.28, animationDelay: wave ? `${(l - 1 + (i - 1)) * 45}ms` : undefined }}
                   >
                     {n > 0 && <span className={`num font-semibold leading-none ${compact ? 'text-[17px]' : 'text-[24px]'}`}>{n}</span>}
-                  </motion.button>
+                  </button>
                 );
               }),
             )}

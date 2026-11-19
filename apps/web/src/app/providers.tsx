@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
 import { hasPermission, systemClock } from '@aravalli/shared';
 import type { Clock, Employee, Permission, SessionUser } from '@aravalli/shared';
 import { auth, onSignedOut, refreshSession } from '../api/client';
@@ -15,7 +14,7 @@ interface AuthCtx {
   /** Why the app could not start (the server is unreachable), when status is 'error'. */
   error: string;
   retry: () => void;
-  /** Called by the sign-in / sign-up / accept-invite forms with the user the server returned. */
+  /** Called by the log-in and sign-up forms with the user the server returned. */
   setUser: (u: SessionUser) => void;
   signOut: () => Promise<void>;
 }
@@ -35,7 +34,7 @@ interface SessionCtx {
 const SessionContext = createContext<SessionCtx | null>(null);
 
 // ------------------------------------------------------------------ toasts
-interface Toast { id: number; message: string }
+interface Toast { id: number; message: string; leaving?: boolean }
 interface ToastCtx { push: (message: string) => void }
 const ToastContext = createContext<ToastCtx | null>(null);
 
@@ -100,6 +99,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const push = useCallback((message: string) => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, message }]);
+    setTimeout(() => setToasts((t) => t.map((x) => (x.id === id ? { ...x, leaving: true } : x))), 3750); // slides out
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
   const toast = useMemo(() => ({ push }), [push]);
@@ -113,22 +113,15 @@ export function Providers({ children }: { children: ReactNode }) {
           <SessionContext.Provider key={user?.user_id ?? 'none'} value={session}>{children}</SessionContext.Provider>
         </AuthContext.Provider>
         <div className="no-print fixed bottom-4 right-4 z-[60] flex w-[min(92vw,380px)] flex-col gap-2" role="status" aria-live="polite">
-          <AnimatePresence initial={false}>
-            {toasts.map((t) => (
-              <motion.div
+          {toasts.map((t) => (
+              <div
                 key={t.id}
-                layout
                 data-testid="toast"
-                initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 24 }}
-                transition={{ duration: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
-                className="rounded-xl border border-line-strong bg-fg px-4 py-3 text-[14px] font-medium text-bg shadow-pop"
+                className={`${t.leaving ? 'toast-out' : 'toast-in'} rounded-xl border border-line-strong bg-fg px-4 py-3 text-[14px] font-medium text-bg shadow-pop`}
               >
                 {t.message}
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
         </div>
       </MetaContext.Provider>
     </ToastContext.Provider>

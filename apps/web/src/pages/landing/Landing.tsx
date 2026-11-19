@@ -1,4 +1,4 @@
-// The public landing page. Built to match docs/design/Main.dc.html: same text, layout and motion.
+// The public landing page.
 // Everything is plain HTML and CSS (see landing.css), including the 3D risk landscape. The only JavaScript is the typed
 // headline, the numbers that count up, the tilt that follows the mouse, the FAQ and the demo sign-in buttons.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -135,6 +135,17 @@ export default function Landing() {
   const terrain = useMemo(() => terrainRings(), []);
 
   useEffect(() => { document.title = `${PRODUCT.name}: ${PRODUCT.tagline}`; }, []);
+  // sections fade and rise as they scroll into view (everything is simply shown when motion is reduced)
+  useEffect(() => {
+    const items = document.querySelectorAll('.lp-reveal');
+    if (reduce || typeof IntersectionObserver === 'undefined') { items.forEach((el) => el.classList.add('lp-in')); return; }
+    const watcher = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('lp-in'); watcher.unobserve(e.target); }
+    }, { threshold: 0.12 });
+    items.forEach((el) => watcher.observe(el));
+    return () => watcher.disconnect();
+  }, [reduce]);
+
   useEffect(() => { auth.demoAccounts().then(setDemo, () => undefined); }, []);
 
   // the headline types itself once; the cursor stays a moment, then goes
@@ -236,7 +247,6 @@ export default function Landing() {
               <span aria-hidden="true">{HEADLINE.slice(0, typedLen)}</span>
               {cursor && <span className="lp-cursor" aria-hidden="true" />}
             </h1>
-            <p className="lp-lede">Aravalli is where a company writes down what could go wrong, reports what did, and follows each incident until it is closed. Each person sees only their own work.</p>
             <div className="lp-actions">
               <Link className="lp-btn lp-btn-main" to="/signup">Start free</Link>
               <a className="lp-btn lp-btn-line" href="#demo">Try the live demo</a>
@@ -284,18 +294,17 @@ export default function Landing() {
       </section>
 
       {/* ------------------------------------------------------------------------------------------ how it works */}
-      <section id="how" className="lp-wrap" style={{ paddingTop: 128 }}>
+      <section id="how" className="lp-wrap lp-reveal" style={{ paddingTop: 128 }}>
         <h2 className="lp-h2">How it works</h2>
         <div className="lp-steps">
           <div className="lp-steps-track" aria-hidden="true" />
           <div className="lp-steps-draw lp-draw" aria-hidden="true" />
           <ol className="lp-four">
-            {STEPS.map(([title, text], i) => (
+            {STEPS.map(([title], i) => (
               <li key={title} className="lp-step">
                 <span className="lp-dot lp-lit" aria-hidden="true" style={{ animationRange: range(35 + i * 10, 40 + i * 7) }} />
                 <span className="lp-dim" style={{ fontSize: 14, marginTop: 8 }}>{i + 1}</span>
                 <span style={{ fontSize: 19, fontWeight: 600 }}>{title}</span>
-                <span className="lp-muted" style={{ fontSize: 15 }}>{text}</span>
               </li>
             ))}
           </ol>
@@ -304,10 +313,9 @@ export default function Landing() {
 
       {/* ------------------------------------------------------------------------------------------ features */}
       <section id="features" className="lp-wrap lp-features" style={{ paddingTop: 104 }}>
-        <div className="lp-feat">
+        <div className="lp-feat lp-reveal">
           <div className="lp-feat-text">
             <h3>Know which risks matter most</h3>
-            <p>Every risk gets an owner and a score from 1 to 25, likelihood times impact. The heat map shows where the dangerous ones sit, and old scores stay in the history so you can see whether a risk is getting better.</p>
           </div>
           <div className="lp-feat-card" style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
             <span className="lp-dim" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 12.5 }}>Likelihood</span>
@@ -322,10 +330,9 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="lp-feat rev">
+        <div className="lp-feat rev lp-reveal">
           <div className="lp-feat-text">
             <h3>Follow every incident to the end</h3>
-            <p>Anyone can report what happened. Someone is made responsible, the harm is contained, the cause is fixed, and each step lands on a timeline that can't be edited later.</p>
           </div>
           <div className="lp-feat-card">
             <div style={{ fontSize: 15, fontWeight: 600 }}>INC-4812 · Finger caught in packing machine chain</div>
@@ -341,10 +348,9 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="lp-feat">
+        <div className="lp-feat lp-reveal">
           <div className="lp-feat-text">
             <h3>Everyone sees only their own work</h3>
-            <p>Five roles, checked by the server on every request. Each company's data is kept apart, and the database refuses any link between two companies.</p>
           </div>
           <div style={{ flex: '1 1 480px', minWidth: 0, borderTop: '1px solid rgba(190,230,210,0.16)' }}>
             {ROLE_ROWS.map(([name, sees], i) => (
@@ -356,10 +362,9 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="lp-feat rev">
+        <div className="lp-feat rev lp-reveal">
           <div className="lp-feat-text">
             <h3>Reports you can hand to management</h3>
-            <p>See which departments carry the most risk and how quickly incidents are resolved. Export to CSV or print.</p>
           </div>
           <div className="lp-feat-card">
             <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Highest risk score by department <span className="lp-dim" style={{ fontWeight: 400, fontSize: 12.5 }}>example</span></div>
@@ -379,23 +384,18 @@ export default function Landing() {
       </section>
 
       {/* ------------------------------------------------------------------------------------------ real data */}
-      <section className="lp-wrap lp-section" aria-label="Real data">
-        <h2 className="lp-h2" style={{ marginBottom: 12 }}>Built on real incidents</h2>
-        <p className="lp-lead" style={{ marginBottom: 36 }}>The two demo companies are filled with public records, so the app is tested at a real company's volume, not on a handful of made-up rows.</p>
+      <section className="lp-wrap lp-section lp-reveal" aria-label="Real data">
+        <h2 className="lp-h2" style={{ marginBottom: 28 }}>Built on real incidents</h2>
         <div className="lp-three" style={{ marginBottom: 40 }}>
           <div className="lp-num-cell"><div className="mono lp-num">{fmt(24802 * count)}</div><div className="lp-muted" style={{ marginTop: 8 }}>IT tickets from a real ServiceNow log</div></div>
           <div className="lp-num-cell"><div className="mono lp-num">{fmt(5481 * count)}</div><div className="lp-muted" style={{ marginTop: 8 }}>workplace injury reports filed with OSHA</div></div>
           <div className="lp-num-cell"><div className="mono lp-num">{fmt(19 * count)}</div><div className="lp-muted" style={{ marginTop: 8 }}>ms to load the incident list on 25,000 rows</div></div>
         </div>
-        <p className="lp-dim" style={{ fontSize: 14, maxWidth: '70ch' }}>
-          Sources: OSHA Severe Injury Reports (US Department of Labor) and the UCI incident management event log (CC BY 4.0). Staff names are role titles, the risk registers were written for this demo, and dates are shifted.
-        </p>
       </section>
 
       {/* ------------------------------------------------------------------------------------------ demo */}
-      <section id="demo" className="lp-wrap lp-section">
-        <h2 className="lp-h2" style={{ marginBottom: 12 }}>Open a demo company</h2>
-        <p className="lp-lead" style={{ marginBottom: 32 }}>Pick a role to sign in as that person. You don't need an account.</p>
+      <section id="demo" className="lp-wrap lp-section lp-reveal">
+        <h2 className="lp-h2" style={{ marginBottom: 28 }}>Open a demo company</h2>
         <div className="lp-two">
           {DEMO_ORGS.map((o) => (
             <article key={o.slug} className="lp-demo-card">
@@ -417,7 +417,7 @@ export default function Landing() {
       </section>
 
       {/* ------------------------------------------------------------------------------------------ FAQ */}
-      <section id="faq" className="lp-wrap lp-section lp-faq">
+      <section id="faq" className="lp-wrap lp-section lp-faq lp-reveal">
         <div style={{ flex: '1 1 280px' }}><h2 className="lp-h2">Questions</h2></div>
         <div style={{ flex: '2 1 560px', display: 'flex', flexDirection: 'column' }}>
           {FAQS.map(([q, a], i) => {
@@ -428,7 +428,7 @@ export default function Landing() {
                   {q}
                   <span aria-hidden="true" style={{ transform: isOpen ? 'rotate(45deg)' : 'none' }}>+</span>
                 </button>
-                {isOpen && <p className="lp-faq-a">{a}</p>}
+                <div className={`lp-faq-wrap ${isOpen ? 'lp-open' : ''}`}><div><p className="lp-faq-a">{a}</p></div></div>
               </div>
             );
           })}
@@ -445,15 +445,13 @@ export default function Landing() {
         </svg>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <h2 style={{ fontSize: 44, lineHeight: 1.1, letterSpacing: '-0.025em', fontWeight: 600, maxWidth: '18ch', marginBottom: 14 }}>Set up Aravalli for your company.</h2>
-          <p className="lp-lead" style={{ maxWidth: '46ch', marginBottom: 28 }}>It takes a few minutes. You become the admin, then add your departments and people.</p>
-          <Link className="lp-btn lp-btn-main" to="/signup" style={{ padding: '15px 24px', borderRadius: 12, fontSize: 16 }}>Create your company</Link>
+            <Link className="lp-btn lp-btn-main" to="/signup" style={{ padding: '15px 24px', borderRadius: 12, fontSize: 16 }}>Create your company</Link>
         </div>
       </section>
 
       <footer className="lp-footer">
         <div className="lp-footer-in">
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#E8EFEB', fontWeight: 650 }}><Mountain size={18} />{PRODUCT.name}</span>
-          <span>Demo companies use real public incident records. Staff are role titles, the risk registers were written for this demo, and dates are shifted.</span>
           <span style={{ marginLeft: 'auto' }}>Data: OSHA Severe Injury Reports · UCI incident event log (CC BY 4.0)</span>
         </div>
       </footer>

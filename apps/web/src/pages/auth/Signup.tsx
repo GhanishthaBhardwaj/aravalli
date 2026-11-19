@@ -34,8 +34,7 @@ export function Signup() {
   return (
     <AuthShell
       title="Create your organisation"
-      subtitle="You become its Org Admin. Invite your team once you are in."
-      footer={<>Already have an account? <Link to="/login" className={authLink}>Sign in</Link></>}
+      footer={<>Already have an account? <Link to="/login" className={authLink}>Log in</Link></>}
     >
       {errors._form && <FormMessage kind="error">{errors._form}</FormMessage>}
       <form onSubmit={submit} noValidate>

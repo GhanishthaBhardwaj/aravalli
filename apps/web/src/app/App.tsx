@@ -33,7 +33,7 @@ function Crash(): never {
 function Allowed({ permission, children }: { permission: Permission; children: ReactNode }) {
   const { can, actor } = useSession();
   if (can(permission)) return <>{children}</>;
-  return <ErrorState title="Not available for your role" body={`${actor.role}s cannot open this page. Ask an Org Admin if you need access.`} />;
+  return <ErrorState title="Not available for your role" body={`${actor.role}s cannot open this page.`} />;
 }
 
 function SignedIn() {

@@ -47,8 +47,8 @@ export function RiskNew() {
   };
 
   return (
-    <Page title="Register risk" description="Add a risk to the register, with an optional first score.">
-      {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-fg pl-4 text-[15px]">{p.reason} Switch the “Acting as” user to register a risk.</p>}
+    <Page title="Register risk">
+      {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-fg pl-4 text-[15px]">{p.reason}</p>}
       <form onSubmit={submit} noValidate className="grid gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_400px]">
         <Section title="Details">
           {errors._form && <p role="alert" className="mb-3 text-[14px] font-medium">{errors._form}</p>}
@@ -73,7 +73,7 @@ export function RiskNew() {
                     options={(departments.data ?? []).map((d) => ({ value: String(d.department_id), label: d.name }))} />
                 )}
               </Field>
-              <Field label="Owner" required error={errors.owner_employee_id} hint="Anyone in the organisation can own a risk. Type to search.">
+              <Field label="Owner" required error={errors.owner_employee_id}>
                 {(f) => <PersonPicker id={f.id} value={owner} onChange={setOwner} placeholder="Search people" invalid={f['aria-invalid']} />}
               </Field>
             </div>

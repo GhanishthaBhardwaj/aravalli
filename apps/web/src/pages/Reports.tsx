@@ -30,13 +30,13 @@ function printOnly(id: string) {
   window.print();
 }
 
-function Report({ id, title, description, onCsv, children }: { id: string; title: string; description: string; onCsv: () => void; children: ReactNode }) {
+function Report({ id, title, description, onCsv, children }: { id: string; title: string; description?: string; onCsv: () => void; children: ReactNode }) {
   return (
     <section data-report={id}>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-[22px] font-semibold">{title}</h2>
-          <p className="mt-1 text-[15px] text-muted">{description}</p>
+          <h2 className="text-[20px] font-semibold">{title}</h2>
+          {description && <p className="mt-1 text-[15px] text-muted">{description}</p>}
         </div>
         <div className="no-print flex gap-2">
           <Button onClick={onCsv}><ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" /> Export CSV</Button>
@@ -74,7 +74,7 @@ export function Reports() {
   ];
 
   return (
-    <Page title="Reports" description="Export management reports as CSV, or print them.">
+    <Page title="Reports">
       <Tabs
         label="Reports"
         value={tab}
@@ -97,7 +97,6 @@ export function Reports() {
                 <Report
                   id="risk-profile"
                   title="Risk profile by department"
-                  description="Open risks by department and risk band."
                   onCsv={() => downloadCsv('risk-profile-by-department.csv', ['Department', ...BANDS], rows.map((r) => [r.department, ...BANDS.map((b) => r[b])]))}
                 >
                   <Card className="overflow-hidden">
@@ -132,7 +131,6 @@ export function Reports() {
               <Report
                 id="resolution"
                 title="Incident resolution performance"
-                description="Time from report to resolution, for incidents that have been resolved."
                 onCsv={() => downloadCsv('incident-resolution-performance.csv', ['Dimension', 'Group', 'Resolved', 'Mean hours', 'Median hours'], [
                   ...bySev.map((r) => ['Severity', r.group, r.resolved, r.meanHours?.toFixed(1) ?? '', r.medianHours?.toFixed(1) ?? '']),
                   ...byDept.map((r) => ['Department', r.group, r.resolved, r.meanHours?.toFixed(1) ?? '', r.medianHours?.toFixed(1) ?? '']),
@@ -153,7 +151,7 @@ export function Reports() {
               <Report
                 id="exceptions"
                 title="Unlinked and unassigned incidents"
-                description={`Open incidents with no assignee or no linked risk. Closed incidents are final and are not listed.${page.total > rows.length ? ` Showing the ${rows.length} most recent of ${page.total}.` : ''}`}
+                description={page.total > rows.length ? `Showing ${rows.length} of ${page.total}` : undefined}
                 onCsv={() => downloadCsv('incident-exceptions.csv', ['Code', 'Title', 'Severity', 'Status', 'Department', 'Assignee', 'Linked risk', 'Occurred'],
                   rows.map((r) => [r.incident_code, r.title, r.severity, r.status, r.department_name, r.assigned_to_name ?? 'Unassigned', r.risk_code ?? 'None', r.occurred_at.slice(0, 10)]))}
               >
@@ -163,7 +161,7 @@ export function Reports() {
                     rowKey={(r) => r.incident_id}
                     rowHref={(r) => `/incidents/${r.incident_code}`}
                     caption="Open incidents with a missing assignee or risk link"
-                    empty={<EmptyState title="No exceptions" body="Every open incident has an assignee and a linked risk." />}
+                    empty={<EmptyState title="No exceptions" />}
                     columns={[
                       { key: 'c', header: 'Code', render: (r) => <IdLink to={`/incidents/${r.incident_code}`}>{r.incident_code}</IdLink> },
                       { key: 't', header: 'Incident', render: (r) => <span className="block max-w-[36ch] truncate font-medium" title={r.title}>{r.title}</span> },

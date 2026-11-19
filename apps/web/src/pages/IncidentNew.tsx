@@ -45,7 +45,7 @@ export function IncidentNew() {
   };
 
   return (
-    <Page title="Report incident" description="Describe what happened. You can assign it and link a risk now or later.">
+    <Page title="Report incident">
       {!p.allowed && <p role="alert" className="mb-8 border-l-2 border-fg pl-4 text-[15px]">{p.reason}</p>}
       <form onSubmit={submit} noValidate className="max-w-2xl">
         <Section title="Incident details">
@@ -71,7 +71,7 @@ export function IncidentNew() {
                 {(f) => <PersonPicker id={f.id} value={assignee} onChange={setAssignee} invalid={f['aria-invalid']} />}
               </Field>
             </div>
-            <Field label="Linked risk (optional)" error={errors.risk_id} hint="Search by risk code or title.">
+            <Field label="Linked risk (optional)" error={errors.risk_id}>
               {(f) => <RiskPicker id={f.id} value={riskId} onChange={setRiskId} invalid={f['aria-invalid']} />}
             </Field>
           </fieldset>

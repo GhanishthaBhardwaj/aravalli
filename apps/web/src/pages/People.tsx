@@ -31,7 +31,7 @@ export function People() {
   );
 
   const cols: Column<EmployeeListItem>[] = [
-    { key: 'code', header: 'Code', hideBelow: 'md', sortKey: 'code', render: (e) => <span className="num text-[13px]">{e.employee_code}</span> },
+    { key: 'code', header: 'Code', hideBelow: 'md', sortKey: 'code', render: (e) => <span className="code text-[13px]">{e.employee_code}</span> },
     { key: 'name', header: 'Name', sortKey: 'name', render: (e) => <span className="inline-flex items-center gap-2 font-medium"><Avatar person={e} size={26} />{fullName(e)}</span> },
     { key: 'title', header: 'Job title', hideBelow: 'md', render: (e) => e.job_title },
     { key: 'role', header: 'Role', hideBelow: 'sm', sortKey: 'role', render: (e) => e.role },
@@ -42,7 +42,7 @@ export function People() {
   ];
 
   return (
-    <Page title="People" description="Everyone in the organisation, with the open risks they own and the open incidents assigned to them.">
+    <Page title="People">
       <div className="mb-6 flex flex-wrap items-end gap-4">
         <FilterSearch label="Search" value={f.get('q')} onChange={(v) => f.set('q', v)} placeholder="Name, email or code" />
         <FilterSelect label="Department" value={f.get('department')} onChange={(v) => f.set('department', v)} options={(departments.data ?? []).map((d) => ({ value: String(d.department_id), label: d.name }))} />
@@ -60,7 +60,7 @@ export function People() {
           error={error?.message}
           onRetry={reload}
           server={{ total: data?.page.total ?? 0, page: list.page, pageSize: PAGE_SIZE, sort: list.sort, dir: list.dir, onSort: list.setSort, onPage: list.setPage }}
-          empty={<EmptyState title="No people match" body="People appear here once they have been added to this organisation, or remove a filter." />}
+          empty={<EmptyState title="No people match" />}
         />
       </Card>
     </Page>

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useExit } from '../../lib/useExit';
 
 interface Props { open: boolean; title: string; description?: string; onClose: () => void; children: ReactNode }
 
@@ -10,6 +10,7 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:n
 /** Centered dialog. Escape and the backdrop close it; focus is trapped inside and handed back on close. */
 export function Modal({ open, title, description, onClose, children }: Props) {
   const titleId = useId();
+  const { mounted, closing } = useExit(open);
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,30 +36,17 @@ export function Modal({ open, title, description, onClose, children }: Props) {
   }, [open, onClose]);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <div className="no-print fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
-          <motion.div
-            className="absolute inset-0"
-            style={{ background: 'var(--overlay)' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={onClose}
-            aria-hidden="true"
-          />
-          <motion.div
+    <>
+      {mounted && (
+        <div className={`no-print fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6 ${closing ? 'pointer-events-none' : ''}`}>
+          <div className={`absolute inset-0 ${closing ? 'fade-out' : 'fade-in'}`} style={{ background: 'var(--overlay)' }} onClick={onClose} aria-hidden="true" />
+          <div
             ref={panel}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
-            className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface shadow-pop sm:max-w-lg sm:rounded-2xl"
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: [0.2, 0.7, 0.2, 1] }}
+            className={`${closing ? 'menu-out' : 'menu-in'} relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface shadow-pop sm:max-w-lg sm:rounded-2xl`}
           >
             <div className="flex items-start justify-between gap-4 px-6 pb-2 pt-6">
               <div>
@@ -70,9 +58,9 @@ export function Modal({ open, title, description, onClose, children }: Props) {
               </button>
             </div>
             <div className="px-6 pb-6 pt-2">{children}</div>
-          </motion.div>
+          </div>
         </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

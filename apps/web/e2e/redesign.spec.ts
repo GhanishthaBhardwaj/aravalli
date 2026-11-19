@@ -1,4 +1,4 @@
-// The approved design (docs/design): the Overview, the Incident register, the Incident detail, and the fixes that came with it.
+// The Overview, the Incident register, the Incident detail, and the fixes that came with it.
 import { expect } from '@playwright/test';
 import { open, test } from './helpers';
 
@@ -8,7 +8,7 @@ test('the Overview shows "N incidents on record · N open", open stages as bars,
   await expect(page.getByText(/\d[\d,]* incidents on record · \d[\d,]* open/)).toBeVisible();
 
   const stage = page.getByRole('heading', { name: 'Open incidents by stage' }).locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]');
-  await expect(stage.getByText(/\d[\d,]* closed incidents are not shown here/)).toBeVisible();
+  await expect(stage.getByText(/^Closed\s*\d[\d,]*$/).first()).toBeVisible();
   for (const label of ['Open', 'Investigating', 'Contained', 'Resolved, awaiting close']) await expect(stage.locator("span", { hasText: label }).first()).toBeVisible();
   // Closed is not a bar, so it cannot hide the other stages
   await expect(stage.locator('span', { hasText: /^Closed$/ })).toHaveCount(0);
@@ -75,4 +75,23 @@ test.describe('at 360px', () => {
       expect(scroll, path).toBeLessThanOrEqual(inner);
     }
   });
+});
+
+test('Ctrl+K focuses the search box, and the page has a favicon and link-preview tags', async ({ page }) => {
+  await open(page, '/');
+  await expect(page.locator('kbd')).toBeVisible();
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('combobox', { name: 'Search risks and incidents' })).toBeFocused();
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /og\.png$/);
+});
+
+test('numbers use the proportional tabular font (so "5,481" has no gaps) and record codes use Geist Mono', async ({ page }) => {
+  await open(page, '/incidents');
+  const fonts = await page.evaluate(() => ({
+    num: getComputedStyle(document.querySelector('.num')!).fontFamily,
+    code: getComputedStyle(document.querySelector('tbody .code')!).fontFamily,
+  }));
+  expect(fonts.num).not.toContain('Geist Mono');
+  expect(fonts.code).toContain('Geist Mono');
 });

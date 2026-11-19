@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { motion } from 'motion/react';
 import { useMeta } from './providers';
 import { PRODUCT } from './brand';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -31,9 +30,9 @@ export function Page({ title, code, description, actions, compact, loading, erro
 
   if (loading) return <PageSkeleton />;
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>
+    <div className="page-enter">
       <PageHeader title={title} code={code} description={description} actions={actions} compact={compact} />
       {error ? <ErrorState title="This page could not be loaded" body={error.message} onRetry={onRetry} /> : children}
-    </motion.div>
+    </div>
   );
 }

@@ -8,7 +8,8 @@ test.describe('colour theme', () => {
   test('is light by default, even when the system prefers dark', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark' });
     const page = await ctx.newPage();
-    await open(page, '/login');
+    await signInAs(page, 'Neha Kapoor');
+    await open(page, '/');
     expect(await theme(page)).toBe('light');
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(bg).toBe('rgb(244, 246, 245)');
@@ -18,7 +19,8 @@ test.describe('colour theme', () => {
   test('the dark theme uses the Ridge night colours', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark' });
     const page = await ctx.newPage();
-    await open(page, '/login');
+    await signInAs(page, 'Neha Kapoor');
+    await open(page, '/');
     await page.getByRole('radio', { name: 'System' }).click();
     expect(await theme(page)).toBe('dark');
     await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(11, 18, 16)');
@@ -28,7 +30,8 @@ test.describe('colour theme', () => {
   test('the toggle overrides the system, persists across reloads, and System goes back to following it', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light' });
     const page = await ctx.newPage();
-    await open(page, '/login');
+    await signInAs(page, 'Neha Kapoor');
+    await open(page, '/');
     await page.getByRole('radio', { name: 'Dark' }).click();
     expect(await theme(page)).toBe('dark');
     await page.reload();
@@ -56,7 +59,7 @@ test('Geist is the UI font, and Geist Mono is used for record codes', async ({ p
   const fonts = await page.evaluate(async () => {
     await document.fonts.ready;
     const body = getComputedStyle(document.body).fontFamily;
-    const code = getComputedStyle(document.querySelector('tbody .num')!).fontFamily;
+    const code = getComputedStyle(document.querySelector('tbody .code')!).fontFamily;
     return { body, code, sans: document.fonts.check('16px Geist'), mono: document.fonts.check('16px "Geist Mono"') };
   });
   expect(fonts.body).toContain('Geist');

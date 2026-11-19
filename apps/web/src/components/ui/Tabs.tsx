@@ -1,6 +1,5 @@
-import { useId, useRef } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
-import { motion } from 'motion/react';
 
 export interface TabItem<T extends string> { id: T; label: string; count?: number }
 
@@ -15,6 +14,13 @@ interface Props<T extends string> {
 export function Tabs<T extends string>({ label, tabs, value, onChange }: Props<T>) {
   const group = useId();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [bar, setBar] = useState<{ left: number; width: number } | null>(null);
+
+  // the underline slides to the selected tab
+  useLayoutEffect(() => {
+    const el = refs.current[value];
+    if (el) setBar({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [value, tabs.length]);
 
   const onKey = (e: KeyboardEvent, i: number) => {
     const move = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
@@ -32,7 +38,7 @@ export function Tabs<T extends string>({ label, tabs, value, onChange }: Props<T
   };
 
   return (
-    <div role="tablist" aria-label={label} className="no-print flex gap-6 overflow-x-auto border-b border-line">
+    <div role="tablist" aria-label={label} className="no-print relative flex gap-6 overflow-x-auto border-b border-line">
       {tabs.map((t, i) => {
         const active = t.id === value;
         return (
@@ -51,10 +57,10 @@ export function Tabs<T extends string>({ label, tabs, value, onChange }: Props<T
           >
             {t.label}
             {t.count !== undefined && <span className="num ml-2 text-[13px] text-subtle">{t.count}</span>}
-            {active && <motion.span layoutId={`${group}-underline`} className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" transition={{ duration: 0.18 }} />}
           </button>
         );
       })}
+      {bar && <span aria-hidden="true" className="slider absolute bottom-0 left-0 h-0.5 bg-accent" style={{ transform: `translateX(${bar.left}px)`, width: bar.width }} />}
     </div>
   );
 }

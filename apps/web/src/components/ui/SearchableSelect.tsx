@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react';
+import { useExit } from '../../lib/useExit';
 
 export interface Opt { value: string; label: string; hint?: string }
 
@@ -23,6 +24,7 @@ export function SearchableSelect({ id, options, value, onChange, placeholder = '
   const [q, setQ] = useState(sel?.label ?? '');
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
+  const list = useExit(open);
   useEffect(() => setQ(sel?.label ?? ''), [sel?.label]);
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -64,8 +66,8 @@ export function SearchableSelect({ id, options, value, onChange, placeholder = '
           else if (e.key === 'Escape') setOpen(false);
         }}
       />
-      {open && (
-        <ul id={lid} role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-line bg-surface py-1 shadow-pop">
+      {list.mounted && (
+        <ul id={lid} role="listbox" className={`${list.closing ? 'menu-out pointer-events-none' : 'menu-in'} absolute z-30 mt-1 max-h-64 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-line bg-surface py-1 shadow-pop`}>
           {shown.length === 0 && <li className="px-3 py-2 text-[14px] text-muted">No matches</li>}
           {shown.map((o, i) => (
             <li

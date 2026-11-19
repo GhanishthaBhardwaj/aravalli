@@ -20,7 +20,7 @@ export function HeatMapPage() {
   const total = (cells ?? []).reduce((n, c) => n + c.risks.length, 0);
 
   return (
-    <Page title="Heat Map" description={cells ? `${total} open risks by likelihood and impact.` : 'Open risks by likelihood and impact.'} error={cells ? null : error} onRetry={reload}>
+    <Page title="Heat Map" description={cells ? `${total} open risks` : undefined} error={cells ? null : error} onRetry={reload}>
       <Tabs
         label="Position basis"
         value={mode}
@@ -47,7 +47,7 @@ export function HeatMapPage() {
                   return (
                     <li key={r.risk_id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line py-4 last:border-0">
                       <div className="min-w-0">
-                        <Link to={`/risks/${r.risk_code}`} className="num text-[13px] font-medium underline underline-offset-4">{r.risk_code}</Link>
+                        <Link to={`/risks/${r.risk_code}`} className="code text-[13px] font-medium underline underline-offset-4">{r.risk_code}</Link>
                         <p className="mt-0.5 truncate text-[16px] font-medium">{r.title}</p>
                         <p className="mt-1 flex items-center gap-2 text-[13px] text-muted">{r.department_name} · <NameChip name={r.owner_name} /></p>
                       </div>

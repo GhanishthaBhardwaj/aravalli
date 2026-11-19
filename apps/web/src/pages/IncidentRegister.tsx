@@ -115,7 +115,7 @@ export function IncidentRegister() {
           error={error?.message}
           onRetry={reload}
           server={{ total: data?.page.total ?? 0, page: list.page, pageSize: PAGE_SIZE, sort: list.sort, dir: list.dir, onSort: list.setSort, onPage: list.setPage }}
-          empty={<EmptyState title="No incidents match these filters" body="Remove a filter or widen the search." action={<Button onClick={f.clear}>Clear filters</Button>} />}
+          empty={<EmptyState title="No incidents match these filters" action={<Button onClick={f.clear}>Clear filters</Button>} />}
         />
       </Card>
     </Page>

@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import type { Permission } from '@aravalli/shared';
 import {
   BuildingOffice2Icon, ClipboardDocumentListIcon, DocumentChartBarIcon, ExclamationTriangleIcon,
@@ -31,6 +32,15 @@ const NAV: { group: string; items: Item[] }[] = [
 export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?: () => void }) {
   const { can } = useSession();
   const label = drawer ? '' : 'hidden lg:inline';
+  const { pathname } = useLocation();
+  const box = useRef<HTMLDivElement>(null);
+  const [mark, setMark] = useState<{ top: number; height: number } | null>(null);
+
+  // the highlight slides to the item of the page that is open
+  useLayoutEffect(() => {
+    const active = box.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    setMark(active ? { top: active.offsetTop, height: active.offsetHeight } : null);
+  }, [pathname, can]);
   return (
     <nav aria-label="Main" className="flex h-full flex-col bg-sidebar">
       <div className="flex h-[72px] items-center gap-3 px-5">
@@ -38,7 +48,8 @@ export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?:
         {!drawer && <span className="lg:hidden"><LogoMark size={26} /></span>}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+      <div ref={box} className="relative flex-1 overflow-y-auto px-3 pb-4 pt-2">
+        {mark && <span aria-hidden="true" className="slider absolute inset-x-3 top-0 rounded-lg bg-surface shadow-[inset_2px_0_0_var(--accent),0_0_0_1px_var(--line)]" style={{ transform: `translateY(${mark.top}px)`, height: mark.height }} />}
         {NAV.map((g) => ({ ...g, items: g.items.filter((it) => !it.needs || can(it.needs)) })).filter((g) => g.items.length > 0).map((g) => (
           <div key={g.group} className="mb-5">
             <div className={`px-3 pb-1.5 text-[13px] text-subtle ${drawer ? '' : 'hidden lg:block'}`}>{g.group}</div>
@@ -50,8 +61,8 @@ export function Sidebar({ drawer, onNavigate }: { drawer?: boolean; onNavigate?:
                 onClick={onNavigate}
                 title={it.label}
                 className={({ isActive }) =>
-                  `flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] transition-colors duration-150 ${
-                    isActive ? 'bg-surface font-semibold text-fg shadow-[inset_2px_0_0_var(--accent),0_0_0_1px_var(--line)]' : 'text-muted hover:bg-surface hover:text-fg'
+                  `relative flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] transition-colors duration-150 ${
+                    isActive ? 'font-semibold text-fg' : 'text-muted hover:bg-surface hover:text-fg'
                   }`
                 }
               >

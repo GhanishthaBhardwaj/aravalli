@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useSession } from '../../app/providers';
 import { Avatar } from '../ui/Avatar';
+import { useExit } from '../../lib/useExit';
 
 /** Who is signed in, which organisation, and the way out. */
 export function AccountMenu() {
@@ -10,6 +11,7 @@ export function AccountMenu() {
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const menu = useExit(open);
 
   useEffect(() => {
     if (!open) return;
@@ -43,8 +45,8 @@ export function AccountMenu() {
           <span className="block text-[12px] text-muted">{actor.role}</span>
         </span>
       </button>
-      {open && (
-        <div role="menu" aria-label="Account" className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-line bg-surface p-2 shadow-pop">
+      {menu.mounted && (
+        <div role="menu" aria-label="Account" className={`${menu.closing ? 'menu-out pointer-events-none' : 'menu-in'} absolute right-0 z-40 mt-2 w-72 rounded-xl border border-line bg-surface p-2 shadow-pop`}>
           <div className="px-3 py-2.5">
             <div className="text-[15px] font-semibold">{actor.first_name} {actor.last_name}</div>
             <div className="text-[13px] text-muted">{actor.job_title}</div>

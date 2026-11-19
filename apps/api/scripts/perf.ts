@@ -3,7 +3,7 @@
 //   npm run perf -w @aravalli/api -- --org osha-manufacturing [--db aravalli_perf] [--label "OSHA 34,472"] [--runs 300]
 //
 // For each endpoint: 30 warm-up requests (not counted), then --runs timed requests; prints p50 and p95 in milliseconds as a
-// markdown table row so the numbers in docs/performance.md can be reproduced.
+// markdown table row so the numbers can be reproduced.
 import { performance } from 'node:perf_hooks';
 import type { AddressInfo } from 'node:net';
 import { systemClock } from '@aravalli/shared';

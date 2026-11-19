@@ -18,15 +18,23 @@ export async function kpis(db: Executor, organisationId: number, now: string): P
      FROM v_risk_current WHERE organisation_id = ?`,
     [organisationId],
   );
-  const inc = await one<{ open_incidents: number; critical_open: number; unassigned_open: number; resolved_30: number; mean_hours: number | null }>(
+  // "Last 30 days" counts back from today, or from the organisation's newest record if that is older (the demo data stops in the
+  // past). Otherwise a company whose data ends two months ago would always show 0.
+  const newest = await one<{ newest: string | null }>(
+    db, 'SELECT MAX(GREATEST(reported_at, COALESCE(resolved_at, reported_at))) AS newest FROM incident WHERE organisation_id = ?', [organisationId],
+  );
+  const today = now.replace('T', ' ');
+  const reference = newest?.newest && newest.newest < today ? newest.newest : today;
+  const inc = await one<{ open_incidents: number; critical_open: number; unassigned_open: number; resolved_30: number; reported_30: number; mean_hours: number | null }>(
     db,
     `SELECT SUM(status IN ${OPEN}) AS open_incidents,
             SUM(status IN ${OPEN} AND severity = 'Critical') AS critical_open,
             SUM(status IN ${OPEN} AND assigned_to IS NULL) AS unassigned_open,
-            SUM(resolved_at IS NOT NULL AND resolved_at >= DATE_SUB(?, INTERVAL 30 DAY)) AS resolved_30,
+            SUM(resolved_at IS NOT NULL AND resolved_at > DATE_SUB(?, INTERVAL 30 DAY) AND resolved_at <= ?) AS resolved_30,
+            SUM(reported_at > DATE_SUB(?, INTERVAL 30 DAY) AND reported_at <= ?) AS reported_30,
             AVG(TIMESTAMPDIFF(SECOND, reported_at, resolved_at)) / 3600 AS mean_hours
      FROM incident WHERE organisation_id = ?`,
-    [now.replace('T', ' '), organisationId],
+    [reference, reference, reference, reference, organisationId],
   );
   return {
     openRisks: Number(risks?.open_risks ?? 0),
@@ -36,6 +44,7 @@ export async function kpis(db: Executor, organisationId: number, now: string): P
     criticalOpenIncidents: Number(inc?.critical_open ?? 0),
     unassignedOpenIncidents: Number(inc?.unassigned_open ?? 0),
     resolvedLast30: Number(inc?.resolved_30 ?? 0),
+    reportedLast30: Number(inc?.reported_30 ?? 0),
     meanHoursToResolve: inc?.mean_hours === null || inc?.mean_hours === undefined ? null : Number(inc.mean_hours),
   };
 }

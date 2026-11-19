@@ -80,6 +80,7 @@ export interface Kpis {
   criticalHighRisks: number;
   openIncidents: number;
   resolvedLast30: number;
+  reportedLast30: number;
   meanHoursToResolve: number | null;
   criticalOpenIncidents: number;
   unassignedOpenIncidents: number;

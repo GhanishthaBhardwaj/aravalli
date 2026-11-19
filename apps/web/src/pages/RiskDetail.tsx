@@ -116,10 +116,10 @@ export function RiskDetail() {
                       </Section>
                     </div>
                   ) : (
-                    <EmptyState title="Not assessed yet" body="Score likelihood and impact to give this risk a position on the heat map." />
+                    <EmptyState title="Not assessed yet" />
                   )
                 ) : risk.linked_incident_count === 0 ? (
-                  <EmptyState title="No linked incidents" body="Incidents that relate to this risk will appear here once they are linked." />
+                  <EmptyState title="No linked incidents" />
                 ) : (
                   <Card className="overflow-hidden">
                     <Table

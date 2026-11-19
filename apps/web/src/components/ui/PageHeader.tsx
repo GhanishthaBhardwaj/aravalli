@@ -13,11 +13,11 @@ interface Props {
 /** Big, bold page headline with room around it. */
 export function PageHeader({ title, description, code, actions, compact }: Props) {
   return (
-    <header className="mb-12 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+    <header className="mb-8 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
       <div className="min-w-0 max-w-3xl">
-        {code && <div className="num mb-2 text-[14px] text-subtle">{code}</div>}
-        <h1 className={`page-title break-words font-bold tracking-[-0.035em] ${compact ? 'text-[24px] leading-[1.2] sm:text-[28px]' : 'text-[34px] leading-[1.08] sm:text-[46px]'}`}>{title}</h1>
-        {description && <p className="mt-4 text-[17px] leading-7 text-muted">{description}</p>}
+        {code && <div className="code mb-2 text-[14px] text-subtle">{code}</div>}
+        <h1 className={`page-title break-words font-bold tracking-[-0.035em] ${compact ? 'text-[24px] leading-[1.2] sm:text-[28px]' : 'text-[30px] leading-[1.1] sm:text-[40px]'}`}>{title}</h1>
+        {description && <p className="mt-3 text-[16px] leading-6 text-muted">{description}</p>}
       </div>
       {actions && <div className="no-print flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>

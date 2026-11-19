@@ -48,7 +48,7 @@ test('the old email pages are gone', async ({ page }) => {
   await expect(page).toHaveURL(/\/login\?next=/);
   await page.goto('/login');
   await expect(page.getByText('Forgot password?')).toHaveCount(0);
-  await expect(page.getByText(/ask your organisation/i)).toBeVisible();
+  await expect(page.getByText(/ask your org admin/i)).toBeVisible();
 });
 
 test('demo login buttons sign in as each role, the account menu shows who, and sign out ends the session', async ({ page }) => {

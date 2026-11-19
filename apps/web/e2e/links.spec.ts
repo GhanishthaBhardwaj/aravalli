@@ -39,7 +39,7 @@ test('the heat-map page lists the risks in a clicked cell and compares first vs 
   await expect(page.getByText('Likelihood 3 × Impact 4')).toBeVisible();
   expect(await page.getByRole('link', { name: /^RSK-/ }).count()).toBe(11);
   await page.getByRole('tab', { name: 'As of first assessment' }).click();
-  await expect(page.getByText(/open risks by likelihood and impact/)).toBeVisible();
+  await expect(page.getByText(/\d+ open risks/)).toBeVisible();
 });
 
 test('the assessment and status panels close with Escape and give focus back', async ({ page }) => {

@@ -20,9 +20,9 @@ import { Card, IdLink } from '../components/ui/layout';
 const link = 'font-medium text-accent underline-offset-4 hover:underline';
 
 /** A titled panel: a bordered surface with a small heading. */
-function Panel({ title, aside, children, className = '' }: { title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
+function Panel({ title, aside, children, delay = 0, className = '' }: { title: string; aside?: React.ReactNode; children: React.ReactNode; delay?: number; className?: string }) {
   return (
-    <Card className={`relative min-w-0 p-[18px] ${className}`}>
+    <Card className={`rise relative min-w-0 p-[18px] ${className}`} style={{ animationDelay: `${delay}ms` }}>
       <div className="mb-3.5 flex items-baseline justify-between gap-3">
         <h2 className="text-[15px] font-semibold">{title}</h2>
         {aside}
@@ -33,12 +33,12 @@ function Panel({ title, aside, children, className = '' }: { title: string; asid
 }
 
 /** One figure in the row at the top: a label, a big number and a line of explanation. */
-function Stat({ label, value, note }: { label: string; value: React.ReactNode; note: string }) {
+function Stat({ label, value, note, delay = 0 }: { label: string; value: React.ReactNode; note?: string; delay?: number }) {
   return (
-    <Card className="p-[16px_18px]">
+    <Card className="rise p-[16px_18px]" style={{ animationDelay: `${delay}ms` }}>
       <div className="text-[13px] text-muted">{label}</div>
       <div className="num mt-1 text-[30px] font-semibold leading-tight tracking-[-0.03em]">{value}</div>
-      <div className="mt-0.5 text-[12.5px] text-muted">{note}</div>
+      {note && <div className="mt-0.5 text-[12.5px] text-muted">{note}</div>}
     </Card>
   );
 }
@@ -108,24 +108,25 @@ export function Overview({ variant = 'officer' }: { variant?: 'admin' | 'officer
       {data && k && (
         <div className="flex flex-col gap-5">
           {attention}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Open incidents" value={<CountUp value={k.openIncidents} format={(n) => Math.round(n).toLocaleString('en-US')} />} note={`${k.criticalOpenIncidents} rated Critical`} />
-            <Stat label="Open risks" value={<CountUp value={k.openRisks} />} note={`of ${k.totalRisks} on the register`} />
-            <Stat label="Resolved in 30 days" value={<CountUp value={k.resolvedLast30} format={(n) => Math.round(n).toLocaleString('en-US')} />} note="incidents" />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+            <Stat delay={0} label="Open incidents" value={<CountUp value={k.openIncidents} format={(n) => Math.round(n).toLocaleString('en-US')} />} note={`${k.criticalOpenIncidents} rated Critical`} />
+            <Stat delay={70} label="Open risks" value={<CountUp value={k.openRisks} />} note={`of ${k.totalRisks} on the register`} />
+            <Stat delay={140} label="Reported in 30 days" value={<CountUp value={k.reportedLast30} format={(n) => Math.round(n).toLocaleString('en-US')} />} />
+            {k.resolvedLast30 > 0 && <Stat delay={175} label="Resolved in 30 days" value={<CountUp value={k.resolvedLast30} format={(n) => Math.round(n).toLocaleString('en-US')} />} />}
             <Stat
+              delay={210}
               label="Average time to resolve"
               value={<CountUp value={k.meanHoursToResolve ?? 0} format={(n) => formatHours(k.meanHoursToResolve === null ? null : n)} />}
-              note="from report to resolution"
             />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]">
-            <Panel title="Risk heat map" aside={<span className="text-[12px] text-muted">{k.totalRisks} risks</span>}>
+            <Panel delay={250} title="Risk heat map" aside={<span className="text-[12px] text-muted">{k.totalRisks} risks</span>}>
               <HeatMap reveal compact cells={data.cells} onSelect={(c) => nav(`/risks?l=${c.likelihood}&i=${c.impact}`)} />
             </Panel>
 
-            <Panel title="Open incidents by stage">
-              <p className="-mt-2 mb-3.5 text-[12.5px] text-muted"><span className="num">{stages.closed.toLocaleString('en-US')}</span> closed incidents are not shown here</p>
+            <Panel delay={320} title="Open incidents by stage">
+              <p className="-mt-2 mb-3.5 text-[12.5px] text-muted">Closed <span className="num">{stages.closed.toLocaleString('en-US')}</span></p>
               <div className="flex flex-col gap-3">
                 {stages.open.map((s, i) => (
                   <div key={s.status}>
@@ -136,7 +137,7 @@ export function Overview({ variant = 'officer' }: { variant?: 'admin' | 'officer
                     <div className="mt-1.5 h-2 overflow-hidden rounded bg-track">
                       <div
                         className="grow-x h-2 rounded"
-                        style={{ width: `${Math.round((s.n / widest) * 100)}%`, background: s.status === 'Resolved' ? 'color-mix(in srgb, var(--accent) 45%, transparent)' : 'var(--accent)', animationDelay: `${200 + i * 90}ms` }}
+                        style={{ width: `${Math.round((s.n / widest) * 100)}%`, background: s.status === 'Resolved' ? 'color-mix(in srgb, var(--fg) 35%, transparent)' : 'color-mix(in srgb, var(--fg) 75%, transparent)', animationDelay: `${200 + i * 90}ms` }}
                       />
                     </div>
                   </div>
@@ -145,7 +146,7 @@ export function Overview({ variant = 'officer' }: { variant?: 'admin' | 'officer
               <ChartTable caption="Incidents by status and severity" rows={stageRows} />
             </Panel>
 
-            <Panel title="Open risks by department">
+            <Panel delay={390} title="Open risks by department">
               <BandBarChart rows={deptRows} label="Stacked bar chart of open risks by department, split by risk band" rowHeight={34} />
               <ChartTable caption="Open risks by department and risk band" rows={deptRows} />
             </Panel>
@@ -183,7 +184,7 @@ export function Overview({ variant = 'officer' }: { variant?: 'admin' | 'officer
           </Card>
           {organisation.data_note && (
             <Card className="p-[16px_18px] text-[13.5px] text-muted">
-              <h2 className="mb-1.5 text-[15px] font-semibold text-fg">Where this data comes from</h2>
+              <h2 className="mb-1.5 text-[15px] font-semibold text-fg">Data source</h2>
               <DataNote note={organisation.data_note} />
             </Card>
           )}

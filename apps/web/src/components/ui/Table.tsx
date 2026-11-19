@@ -141,12 +141,13 @@ export function Table<T>({
                     {columns.map((c) => <td key={c.key} className={HIDE[c.hideBelow ?? '']}><Skeleton className="h-4 w-full max-w-[160px]" /></td>)}
                   </tr>
                 ))
-              : view.map((r) => {
+              : view.map((r, index) => {
                   const href = rowHref?.(r);
                   return (
                     <tr
                       key={rowKey(r)}
-                      className={href ? 'row-link' : ''}
+                      className={`row-in ${href ? 'row-link' : ''}`}
+                      style={{ animationDelay: `${Math.min(index, 12) * 25}ms` }}
                       tabIndex={href ? 0 : undefined}
                       onClick={href ? () => nav(href) : undefined}
                       onKeyDown={href ? (e) => e.key === 'Enter' && nav(href) : undefined}

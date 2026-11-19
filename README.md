@@ -5,7 +5,7 @@ Enterprise risk and incident management for companies: register risks with an ac
 the organisation stands.
 
 Aravalli is a **multi-tenant SaaS product**: a company signs up, its admin adds its people, and keeps its own risks and incidents,
-completely separate from every other company. The plan is in [`PLAN.md`](PLAN.md).
+completely separate from every other company.
 
 **Where it stands (end of Phase 3):** a React web app on an Express + TypeScript API on MySQL 8, with sign-up, login,
 five server-enforced roles, per-role home screens, a plain public landing page, and two demonstration organisations filled with
@@ -27,9 +27,9 @@ npm run import:osha         # "OSHA Severe Injury Reports": ~5,500 real OSHA rec
 npm run dev                 # web http://localhost:5173, API http://localhost:3001, API docs http://localhost:3001/api/docs
 ```
 
-With `DEMO_LOGINS=true` in `.env` (the default in `.env.example`) the sign-in page shows a button per role for each
-demonstration organisation. **Never turn that on for a real deployment.** Nothing in the product sends email: an Org Admin adds
-people on the Users screen (name, email, role, department, first password) and can set a new password for them.
+With `DEMO_LOGINS=true` in `.env` (the default in `.env.example`) the log-in page shows a button per role for each
+demonstration organisation. **Never turn that on for a real deployment.** An Org Admin adds people on the Users screen (name, email,
+role, department, first password) and can set a new password for them.
 
 ## Roles and permissions
 
@@ -136,12 +136,12 @@ and proves it). On local MySQL the triggers do the same job. Migrations, imports
 | `npm test` | Unit and API tests for every package. The API tests need MySQL and build a separate `aravalli_test` database. |
 | `npm run e2e` | Browser tests (Playwright) against a real API and the test database. |
 | `npm run typecheck`, `lint`, `build` | Checks. |
-| `npm run db:migrate`, `db:status`, `db:seed`, `db:reset`, `db:verify` | Database commands, see [`docs/schema.md`](docs/schema.md). |
+| `npm run db:migrate`, `db:status`, `db:seed`, `db:reset`, `db:verify` | Database commands. |
 | `npm run data:download` | Fetch the UCI dataset into `data/raw/` and record its source and checksum. |
 | `npm run import:uci`, `import:osha` | Load the real data (`-- --all-manufacturing --db aravalli_perf` loads all 34,472 OSHA manufacturing rows for performance tests). |
 | `npm start` | Production mode: the API serving the built web app (`npm run build -w @aravalli/web` first; set `NODE_ENV=production`, `JWT_SECRET`). |
 | `npm run db:migrate:prod`, `db:status:prod`, `import:uci:prod`, `import:osha:prod` | The same, against the database in `.env.production` (TiDB). Also `db:app-user:prod` and `db:verify:prod`. |
-| `npm run perf` | Time the API endpoints (p50/p95), see [`docs/performance.md`](docs/performance.md). |
+| `npm run perf` | Time the API endpoints (p50/p95). |
 
 ## Layout
 
@@ -151,20 +151,19 @@ apps/api          API (routes, controllers, services, repositories), migrations,
 packages/shared   Pure domain logic (no React, no I/O): types, scoring, transitions, validation, the permission map, the clock.
 scripts/          Development helpers.
 data/             sources.json (committed). raw/ is git-ignored.
-docs/             API, schema, performance, bug list, manual test checklist, interview guide, database verification.
+docs/             API, deployment, capacity test, project guide.
 ```
 
 ## Security notes
 
 Argon2id passwords; 15-minute JWT access tokens held in memory only; rotating refresh tokens in an httpOnly, SameSite=Strict, Secure
-cookie, stored hashed, with reuse detection (a replayed token revokes the whole login); passwords are set by the Org Admin (no
-email links to steal); rate limits on login and sign-up; helmet headers; parameterised SQL only; the organisation always comes from
+cookie, stored hashed, with reuse detection (a replayed token revokes the whole login); passwords are set by the Org Admin; rate limits on login and sign-up; helmet headers; parameterised SQL only; the organisation always comes from
 the session. Limits: access is checked per request in the database, so a deactivated user is out at once; there is no 2FA, no
 account lockout beyond rate limiting, and the in-memory rate limiter resets when the server restarts.
 
 ## Design
 
-Geist (UI) and Geist Mono (codes and numbers only), self-hosted. The "Ridge" colours (forest graphite and jade, see `docs/design/Colours.dc.html`):
+Geist (UI) and Geist Mono (codes and numbers only), self-hosted. The "Ridge" colours (forest graphite and jade):
 light is the app's default (page `#F4F6F5`, panels white, accent `#0F7A5A`), dark is for the landing page and the app's dark mode
 (page `#0B1210`, accent `#3DB58B`). Jade is the brand and is never used for a warning: severity has its own colours (Low grey, Medium amber,
 High orange, Critical red) and is always a dot plus the word. The tokens are in `apps/web/src/styles/tokens.css`. Motion is short CSS
@@ -172,14 +171,9 @@ and is switched off when the system asks for reduced motion.
 
 ## Documents
 
-- [`PLAN.md`](PLAN.md): what Aravalli must become, the phases, the design rules.
 - [`docs/api.md`](docs/api.md): the API: layers, errors, paging, code generation, tests.
-- [`docs/schema.md`](docs/schema.md): the database, tenancy, normalisation, lifecycles.
-- [`docs/performance.md`](docs/performance.md): timings on the real data volumes, before and after indexes.
 - [`docs/DEPLOY-RENDER.md`](docs/DEPLOY-RENDER.md): put it online on Render and TiDB Cloud, step by step.
-- [`docs/manual-checklist.md`](docs/manual-checklist.md): test it yourself in the browser.
-- [`docs/INTERVIEW-GUIDE.md`](docs/INTERVIEW-GUIDE.md): how to explain the project.
-- [`docs/db-verification.md`](docs/db-verification.md): proof of the schema on MySQL.
-- [`docs/bugs-phase1.md`](docs/bugs-phase1.md): what was wrong and what was done.
+- [`docs/MY-PROJECT-GUIDE.md`](docs/MY-PROJECT-GUIDE.md): the project explained in plain English.
+- [`docs/CAPACITY.md`](docs/CAPACITY.md): what the capacity test measured.
 
 Geist is licensed under the SIL Open Font License (copy in `apps/web/public/fonts`).

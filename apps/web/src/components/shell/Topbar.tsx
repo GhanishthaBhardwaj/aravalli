@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bars3Icon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { useSession } from '../../app/providers';
@@ -36,6 +36,21 @@ function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const [results, setResults] = useState<SearchHit[]>([]);
+  const input = useRef<HTMLInputElement>(null);
+  const shortcut = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K';
+
+  // Ctrl+K (Cmd+K on a Mac) jumps to the search box from anywhere
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        input.current?.focus();
+        input.current?.select();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   // Searching happens on the server (a register can hold tens of thousands of records), a moment after typing stops.
   useEffect(() => {
@@ -65,10 +80,11 @@ function GlobalSearch() {
       <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-[12px] h-4 w-4 text-subtle" aria-hidden="true" />
       <input
         id="global-search"
+        ref={input}
         role="combobox"
         aria-expanded={open && results.length > 0}
         aria-controls="global-search-list"
-        className="control pl-9"
+        className="control pl-9 md:pr-16"
         placeholder="Search risks and incidents"
         value={q}
         onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }}
@@ -81,8 +97,9 @@ function GlobalSearch() {
           else if (e.key === 'Escape') setOpen(false);
         }}
       />
+      {!q && !open && <kbd className="pointer-events-none absolute right-3 top-[11px] hidden rounded border border-line px-1.5 text-[11px] font-medium leading-5 text-muted md:block">{shortcut}</kbd>}
       {open && q.trim().length >= 2 && (
-        <ul id="global-search-list" role="listbox" className="absolute z-30 mt-1 w-full min-w-[300px] rounded-lg border border-line bg-surface py-1 shadow-pop">
+        <ul id="global-search-list" role="listbox" className="menu-in absolute z-30 mt-1 w-full min-w-[300px] rounded-lg border border-line bg-surface py-1 shadow-pop">
           {results.length === 0 && <li className="px-3 py-2 text-[14px] text-muted">No matches</li>}
           {results.map((r, i) => (
             <li
@@ -92,7 +109,7 @@ function GlobalSearch() {
               onMouseDown={(e) => { e.preventDefault(); go(r.to); }}
               className={`flex cursor-pointer gap-3 px-3 py-2 ${i === hi ? 'bg-surface-2' : ''}`}
             >
-              <span className="num shrink-0 text-[12px] text-subtle">{r.code}</span>
+              <span className="code shrink-0 text-[12px] text-subtle">{r.code}</span>
               <span className="truncate text-[14px]">{r.title}</span>
             </li>
           ))}
@@ -120,7 +137,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 {c.to ? (
                   <Link to={c.to} className="truncate text-muted hover:text-fg">{c.label}</Link>
                 ) : (
-                  <span className={`truncate ${last ? `font-medium text-fg ${/^[A-Z]{3}-\d{4}$/.test(c.label) ? 'num' : ''}` : 'text-muted'}`} aria-current={last ? 'page' : undefined}>{c.label}</span>
+                  <span className={`truncate ${last ? `font-medium text-fg ${/^[A-Z]{3}-\d{4}$/.test(c.label) ? 'code' : ''}` : 'text-muted'}`} aria-current={last ? 'page' : undefined}>{c.label}</span>
                 )}
               </span>
             );
